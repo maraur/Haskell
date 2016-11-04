@@ -16,30 +16,16 @@ empty :: Hand
 empty = Empty
 ---------------------------------------------------------
 --value :: Hand -> Integer
+example_card_1 = Card (Numeric 8) Spades
+example_card_2 = Card {rank=King, suit=Hearts}
 
---valueRank :: Rank -> Integer
+valueRank :: Rank -> Integer
+valueRank Ace = 11
+valueRank (Numeric n) = n
+valueRank _ = 10
 
---valueCard :: Card ->
-
-example_card_1 = Card King Clubs
-
-example_card_2 = Card {rank=Ace, suit=Spades}
-
-example_hand_0 = Empty
-
-example_hand_1 = Add example_card_1 Empty
-
-example_hand_2 = Add example_card_2 example_hand_1
-
-example_hand_3 = Add example_card_2 example_hand_2
-
-example_hand_4 = Add example_card_1 example_hand_3
-
-example_hand_5 = Add example_card_1 example_hand_4
-
-example_hand_6 = Add example_card_2 example_hand_5
-
-example_hand_7 = Add example_card_2 example_hand_6
+valueCard :: Card -> Integer
+valueCard c = valueRank(rank c)
 
 numberOfAces :: Hand -> Integer
 numberOfAces Empty           = 0

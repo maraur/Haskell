@@ -28,18 +28,13 @@ numberOfAces Empty           = 0
 numberOfAces (Add c h) | rank c == Ace = 1 + numberOfAces h
                        | otherwise     = numberOfAces h
 
---TODO: FIX (if value>21 and hand contains aces do: -10*numberOfAces)
+valueHand :: Hand -> Integer
+valueHand Empty = 0
+valueHand (Add c h) = valueCard c + valueHand h
+
 value :: Hand -> Integer
-value Empty = 0
-value (Add c h) = valueCard c + value h
-
-example_card_1 = Card (Numeric 8) Spades
-example_card_2 = Card {rank=Ace, suit=Hearts}
-
-example_hand_1 = Add example_card_1 Empty
-example_hand_2 = Add example_card_2 example_hand_1
-example_hand_3 = Add example_card_2 example_hand_2
-example_hand_4 = Add example_card_2 example_hand_3
+value h | valueHand h > 21 = valueHand h - 10 * numberOfAces h
+        | otherwise = valueHand h
 
 gameOver :: Hand -> Bool
 gameOver h | value h > 21 = True

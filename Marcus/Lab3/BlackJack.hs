@@ -65,6 +65,7 @@ winner h1 h2 | valueHand h1 > 21           = Bank
 
 (<+) :: Hand -> Hand -> Hand
 Empty <+ h2 = h2
+h1 <+ Empty = h1
 (Add c1 h1) <+ h2 | (Add c1 h1) == Empty = h2
                   | h1 == Empty          = (Add c1 h2)
                   | otherwise            = (Add c1 (h1 <+ h2))

@@ -11,10 +11,13 @@ size hand2
 module BlackJack where
 import Cards
 import RunGame
+import System.Random
+import Test.QuickCheck
 
 empty :: Hand
 empty = Empty
 ---------------------------------------------------------
+
 card_1 = Card (Numeric 8) Spades
 card_2 = Card {rank=King, suit=Hearts}
 card_3 = Card {rank=Ace, suit=Hearts}
@@ -27,6 +30,7 @@ hand_2 = Add card_2 hand_1
 hand_3 = Add card_3 hand_2
 hand_4 = Add card_4 hand_3
 hand_5 = Add card_5 hand_4
+
 
 valueRank :: Rank -> Integer
 valueRank Ace = 11
@@ -57,3 +61,31 @@ winner h1 h2 | valueHand h1 > 21           = Bank
              | valueHand h2 > 21           = Guest
              | valueHand h1 > valueHand h2 = Guest
              | otherwise                   = Bank
+
+
+(<+) :: Hand -> Hand -> Hand
+Empty <+ h2 = h2
+(Add c1 h1) <+ h2 | (Add c1 h1) == Empty = h2
+                  | h1 == Empty          = (Add c1 h2)
+                  | otherwise            = (Add c1 (h1 <+ h2))
+
+
+prop_onTopOf_assoc :: Hand -> Hand -> Hand -> Bool
+prop_onTopOf_assoc p1 p2 p3 = p1 <+ (p2 <+ p3) == (p1 <+ p2) <+ p3
+
+prop_size_onTopOf :: Hand -> Hand -> Bool
+prop_size_onTopOf h1 h2 = size(h1 <+ h2) == (size(h1) + size(h2))
+
+-- fullDeck :: Hand
+
+-- draw :: Hand -> Hand -> (Hand,Hand)
+{-
+If the deck is empty, report an error using error:
+error "draw: The deck is empty."
+-}
+
+-- playBank :: Hand -> Hand
+
+-- shuffle :: StdGen -> Hand -> Hand
+
+--prop_size_shuffle :: StdGen -> Hand -> Bool

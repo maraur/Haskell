@@ -77,7 +77,15 @@ prop_onTopOf_assoc p1 p2 p3 = p1 <+ (p2 <+ p3) == (p1 <+ p2) <+ p3
 prop_size_onTopOf :: Hand -> Hand -> Bool
 prop_size_onTopOf h1 h2 = size(h1 <+ h2) == (size(h1) + size(h2))
 
--- fullDeck :: Hand
+--fullDeck :: Hand
+--fullDeck = (allSuit Hearts) <+ (allSuit Spades)
+--            <+ (allSuit Diamonds) <+ (allSuit Clubs)
+ranks = [Numeric n | n <- [2..10]] ++ [Jack, Queen, King, Ace]
+
+allSuit :: Suit -> Hand
+allSuit suit =
+
+
 
 -- draw :: Hand -> Hand -> (Hand,Hand)
 {-

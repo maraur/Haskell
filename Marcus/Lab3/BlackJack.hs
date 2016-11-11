@@ -62,7 +62,7 @@ winner guest bank | gameOver guest                   = Bank
                   | gameOver bank                    = Guest
                   | valueHand guest > valueHand bank = Guest
                   | otherwise                        = Bank
-
+---------------------------------------------------------------------
 (<+) :: Hand -> Hand -> Hand
 Empty <+ h2              = h2
 h1 <+ Empty              = h1
@@ -73,7 +73,6 @@ prop_onTopOf_assoc p1 p2 p3 = p1 <+ (p2 <+ p3) == (p1 <+ p2) <+ p3
 
 prop_size_onTopOf :: Hand -> Hand -> Bool
 prop_size_onTopOf h1 h2 = size(h1 <+ h2) == (size(h1) + size(h2))
-
 
 fullDeck :: Hand
 --fullDeck = foldr (\x -> makeSuit x (<+)) [] suits
@@ -89,14 +88,24 @@ makeSuit suit = foldr (\x -> (Add (Card x suit))) Empty ranks
 draw :: Hand -> Hand -> (Hand,Hand)
 draw Empty hand        = error "draw: The deck is empty."
 draw (Add c deck) hand = (deck, (Add c hand))
+
+
 {-
-Deck -> Hand
-If the deck is empty, report an error using error:
-error "draw: The deck is empty."
+playBank :: Hand -> Hand
+playBank deck =
+playBank' deck bankHand =
+           where (deck′,bankHand′) = draw deck bankHand
+--The bank draws cards until its score is 16 or higher, and then it stops.
 -}
+--shuffle :: StdGen -> Hand -> Hand
 
--- playBank :: Hand -> Hand
 
--- shuffle :: StdGen -> Hand -> Hand
+removeCard :: Hand -> Int -> [Card]-> (Card, Hand)
+removeCard (Add c1 h1) rIndex cardList
+             | length cardList == (rIndex - 1) = (c1, (listToHand (reverse cardList)) <+ h1)
+             | otherwise = removeCard h1 rIndex (c1:cardList)
+
+listToHand :: [Card] -> Hand
+listToHand cards = foldr (\x -> (Add (x))) Empty cards
 
 -- prop_size_shuffle :: StdGen -> Hand -> Bool

@@ -22,8 +22,8 @@ card_5 = Card {rank=Ace, suit=Spades}
 
 hand_0 = Empty
 hand_1 = Add card_1 Empty
-hand_2 = Add card_2 Empty
-hand_3 = Add card_3 Empty
+hand_2 = Add card_2 hand_1
+hand_3 = Add card_3 hand_2
 hand_4 = Add card_4 hand_3
 hand_5 = Add card_5 hand_4
 
@@ -73,17 +73,12 @@ prop_onTopOf_assoc p1 p2 p3 =
 prop_size_onTopOf :: Hand -> Hand -> Bool
 prop_size_onTopOf h1 h2 = (size h1 + size h2) == size (h1 <+ h2)
 
---TODO: FIX
 rankList :: [Rank]
 rankList = [Numeric n | n <- [2..10]] ++ [Jack, Queen, King, Ace]
 
---TODO: FIX
 deckOfSuit :: [Rank] -> Suit -> Hand
---deckOfSuit [] s = Empty
---deckOfSuit (x:xs) s = Add Card {rank=x, suit=s} (deckOfSuit xs s)
 deckOfSuit xs s = foldr (\ x -> Add Card{rank = x, suit = s}) Empty xs
 
---TODO: FIX, use a list as well?
 fullDeck :: Hand
 fullDeck = deckOfSuit rankList Spades <+ deckOfSuit rankList Hearts
           <+ deckOfSuit rankList Diamonds <+ deckOfSuit rankList Clubs
@@ -92,21 +87,36 @@ draw :: Hand -> Hand -> (Hand,Hand)
 draw Empty _              = error "draw: The deck is empty."
 draw (Add card deck) hand = (deck, Add card hand)
 
---To write this function you will probably need to introduce a help function
---that takes two hands as input, the deck and the bank’s hand.
---To draw a card from the deck you can use where in the following way:
 playBank' :: Hand -> Hand -> Hand
-playBank' deck bankHand | value bankHand < 15 = playBank' deck' bankHand'
+playBank' deck bankHand | value bankHand < 16 = playBank' deck' bankHand'
                         | otherwise           = bankHand
   where (deck',bankHand') = draw deck bankHand
---Given a deck, play for the bank according to
---the rules above (starting with an empty hand),
---and return the bank’s final hand:
+
 playBank :: Hand -> Hand
 playBank deck = playBank' deck Empty
 
---shuffle :: StdGen -> Hand -> Hand
+removeCard :: Hand ->  Hand -> Integer -> (Card, Hand)
+removeCard (Add c h1) h2 1        = (c, h1 <+ h2)
+removeCard h1         h2 index   = removeCard h1' h2' (index-1)
+  where (h1', h2') = draw h1 h2
 
+shuffle :: StdGen -> Hand -> Hand
+shuffle g Empty = Empty
+shuffle g h     = Add card' (shuffle g1 hand')
+  where (card', hand')  = removeCard h Empty index
+        (index, g1)     = randomR (1, size h) g
+
+
+prop_shuffle_sameCards :: StdGen -> Card -> Hand -> Bool
+prop_shuffle_sameCards g c h =
+    c `belongsTo` h == c `belongsTo` shuffle g h
+
+belongsTo :: Card -> Hand -> Bool
+c `belongsTo` Empty = False
+c `belongsTo` (Add c' h) = c == c' || c `belongsTo` h
+
+prop_size_shuffle :: StdGen -> Hand -> Bool
+prop_size_shuffle g h = size h == size (shuffle g h)
 
 implementation = Interface
   { iEmpty    = empty

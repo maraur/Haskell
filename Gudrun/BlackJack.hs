@@ -12,6 +12,7 @@ module BlackJack where
 import Cards
 import RunGame
 import Test.QuickCheck
+import System.Random
 
 card_1 = Card (Numeric 8) Spades
 card_2 = Card {rank=King, suit=Hearts}
@@ -31,36 +32,35 @@ empty :: Hand
 empty = Empty
 
 valueRank :: Rank -> Integer
-valueRank Ace = 11
+valueRank Ace         = 11
 valueRank (Numeric n) = n
-valueRank _ = 10
+valueRank _           = 10
 
 valueCard :: Card -> Integer
 valueCard c = valueRank(rank c)
 
 numberOfAces :: Hand -> Integer
-numberOfAces Empty           = 0
-numberOfAces (Add c h) | rank c == Ace = 1 + numberOfAces h
-                       | otherwise     = numberOfAces h
+numberOfAces Empty                            = 0
+numberOfAces (Add Card {rank=Ace, suit=s} h)  = 1 + numberOfAces h
+numberOfAces (Add c h)                        = numberOfAces h
 
 valueHand :: Hand -> Integer
-valueHand Empty = 0
+valueHand Empty     = 0
 valueHand (Add c h) = valueCard c + valueHand h
 
 value :: Hand -> Integer
-value h | valueHand h > 21 = valueHand h - 10 * numberOfAces h
-        | otherwise = valueHand h
+value h | valueHand h > 21  = valueHand h - 10 * numberOfAces h
+        | otherwise         = valueHand h
 
 gameOver :: Hand -> Bool
 gameOver h | value h > 21 = True
-           |otherwise = False
+           |otherwise     = False
 
 winner :: Hand -> Hand -> Player
-winner h_guest h_bank | value h_guest > 21 = Bank
-                      | value h_bank > 21 = Guest
-                      | value h_guest > value h_bank = Guest
-                      | otherwise = Bank
-
+winner guest bank | gameOver guest                    = Bank
+                  | gameOver bank                     = Guest
+                  | valueHand guest > valueHand bank  = Guest
+                  | otherwise                         = Bank
 
 (<+) :: Hand -> Hand -> Hand
 Empty <+ h2           = h2
@@ -76,8 +76,7 @@ prop_size_onTopOf h1 h2 = (size h1 + size h2) == size (h1 <+ h2)
 
 --TODO: FIX
 rankList :: [Rank]
-rankList = [Numeric 1,Numeric 2,Numeric 3,Numeric 4,Numeric 5,Numeric 6,
-            Numeric 7,Numeric 8,Numeric 9,Numeric 10,Jack, Queen, King, Ace]
+rankList = [Numeric n | n <- [2..10]] ++ [Jack, Queen, King, Ace]
 
 --TODO: FIX
 deckOfSuit :: [Rank] -> Suit -> Hand
@@ -91,20 +90,46 @@ fullDeck = deckOfSuit rankList Spades <+ deckOfSuit rankList Hearts
           <+ deckOfSuit rankList Diamonds <+ deckOfSuit rankList Clubs
 
 draw :: Hand -> Hand -> (Hand,Hand)
-draw Empty _ = error "draw: The deck is empty."
+draw Empty _              = error "draw: The deck is empty."
 draw (Add card deck) hand = (deck, Add card hand)
+
 --To write this function you will probably need to introduce a help function
 --that takes two hands as input, the deck and the bank’s hand.
 --To draw a card from the deck you can use where in the following way:
 playBank' :: Hand -> Hand -> Hand
-playBank' deck bankHand | value bankHand < 15 = draw deck bankHand
-                        | otherwise = bankHand
-  --where (deck′,bankHand′) = draw deck bankHand
-
+playBank' deck bankHand | value bankHand < 15 = playBank' deck' bankHand'
+                        | otherwise           = bankHand
+  where (deck',bankHand') = draw deck bankHand
 --Given a deck, play for the bank according to
 --the rules above (starting with an empty hand),
 --and return the bank’s final hand:
 playBank :: Hand -> Hand
-playBank deck | value playBank' deck > 15 = playBank'
+playBank deck = playBank' deck Empty
+
+removeCard :: Hand -> Int -> [Card]-> (Card, Hand)
+removeCard (Add c1 h1) rIndex cardList
+             | length cardList == (rIndex - 1) = (c1, (listToHand (reverse cardList)) <+ h1)
+             | otherwise = removeCard h1 rIndex (c1:cardList)
+
+listToHand :: [Card] -> Hand
+listToHand cards = foldr (\x -> (Add (x))) Empty cards
 
 --shuffle :: StdGen -> Hand -> Hand
+--shuffle S
+oneRandomInteger :: StdGen -> Integer
+oneRandomInteger g = fst (randomR (0,10) g)
+{-
+twoRandomIntegers :: StdGen -> (Integer,Integer)
+twoRandomIntegers g = (n1, n2)
+  where (n1, g1) = randomR (0, 10) g
+        (n2, g2) = randomR (0, 10) g1
+-}
+--prop_shuffle_sameCards :: StdGen -> Card -> Hand -> Bool
+--prop_shuffle_sameCards g c h =
+--    c `belongsTo` h == c `belongsTo` shuffle g h
+
+--belongsTo :: Card -> Hand -> Bool
+--c `belongsTo` Empty = False
+--c `belongsTo` (Add c′ h) = c == c′ || c `belongsTo` h
+
+--prop_size_shuffle :: StdGen -> Hand -> Bool

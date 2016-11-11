@@ -41,9 +41,10 @@ valueCard :: Card -> Integer
 valueCard c = valueRank(rank c)
 
 numberOfAces :: Hand -> Integer
-numberOfAces Empty           = 0
-numberOfAces (Add c h) | rank c == Ace = 1 + numberOfAces h
-                       | otherwise     = numberOfAces h
+numberOfAces Empty                            = 0
+numberOfAces (Add Card {rank=Ace, suit=_} h)  = 1 + numberOfAces h
+numberOfAces (Add c h)                        = numberOfAces h
+
 --Helper function
 valueHand :: Hand -> Integer
 valueHand Empty     = 0
@@ -57,19 +58,15 @@ gameOver :: Hand -> Bool
 gameOver h =  (value h > 21)
 
 winner :: Hand -> Hand -> Player
-winner h1 h2 | valueHand h1 > 21           = Bank
-             | valueHand h2 > 21           = Guest
-             | valueHand h1 > valueHand h2 = Guest
-             | otherwise                   = Bank
-
+winner guest bank | gameOver guest                   = Bank
+                  | gameOver bank                    = Guest
+                  | valueHand guest > valueHand bank = Guest
+                  | otherwise                        = Bank
 
 (<+) :: Hand -> Hand -> Hand
-Empty <+ h2 = h2
-h1 <+ Empty = h1
-(Add c1 h1) <+ h2 | (Add c1 h1) == Empty = h2
-                  | h1 == Empty          = (Add c1 h2)
-                  | otherwise            = (Add c1 (h1 <+ h2))
-
+Empty <+ h2              = h2
+h1 <+ Empty              = h1
+(Add c1 h1) <+ h2        = (Add c1 (h1 <+ h2))
 
 prop_onTopOf_assoc :: Hand -> Hand -> Hand -> Bool
 prop_onTopOf_assoc p1 p2 p3 = p1 <+ (p2 <+ p3) == (p1 <+ p2) <+ p3
@@ -77,18 +74,23 @@ prop_onTopOf_assoc p1 p2 p3 = p1 <+ (p2 <+ p3) == (p1 <+ p2) <+ p3
 prop_size_onTopOf :: Hand -> Hand -> Bool
 prop_size_onTopOf h1 h2 = size(h1 <+ h2) == (size(h1) + size(h2))
 
---fullDeck :: Hand
---fullDeck = (allSuit Hearts) <+ (allSuit Spades)
---            <+ (allSuit Diamonds) <+ (allSuit Clubs)
+
+fullDeck :: Hand
+--fullDeck = foldr (\x -> makeSuit x (<+)) [] suits
+fullDeck = makeSuit Hearts <+ makeSuit Spades <+ makeSuit Diamonds
+          <+ makeSuit Clubs
+
+suits = [Hearts, Spades, Diamonds, Clubs]
 ranks = [Numeric n | n <- [2..10]] ++ [Jack, Queen, King, Ace]
 
-allSuit :: Suit -> Hand
-allSuit suit =
+makeSuit :: Suit -> Hand
+makeSuit suit = foldr (\x -> (Add (Card x suit))) Empty ranks
 
-
-
--- draw :: Hand -> Hand -> (Hand,Hand)
+draw :: Hand -> Hand -> (Hand,Hand)
+draw Empty hand        = error "draw: The deck is empty."
+draw (Add c deck) hand = (deck, (Add c hand))
 {-
+Deck -> Hand
 If the deck is empty, report an error using error:
 error "draw: The deck is empty."
 -}
@@ -97,4 +99,4 @@ error "draw: The deck is empty."
 
 -- shuffle :: StdGen -> Hand -> Hand
 
---prop_size_shuffle :: StdGen -> Hand -> Bool
+-- prop_size_shuffle :: StdGen -> Hand -> Bool

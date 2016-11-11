@@ -11,7 +11,7 @@ size hand2
 module BlackJack where
 import Cards
 import RunGame
-import Test.QuickCheck
+import Test.QuickCheck hiding (shuffle)
 import System.Random
 
 card_1 = Card (Numeric 8) Spades
@@ -26,7 +26,6 @@ hand_2 = Add card_2 Empty
 hand_3 = Add card_3 Empty
 hand_4 = Add card_4 hand_3
 hand_5 = Add card_5 hand_4
-
 
 empty :: Hand
 empty = Empty
@@ -106,30 +105,19 @@ playBank' deck bankHand | value bankHand < 15 = playBank' deck' bankHand'
 playBank :: Hand -> Hand
 playBank deck = playBank' deck Empty
 
-removeCard :: Hand -> Int -> [Card]-> (Card, Hand)
-removeCard (Add c1 h1) rIndex cardList
-             | length cardList == (rIndex - 1) = (c1, (listToHand (reverse cardList)) <+ h1)
-             | otherwise = removeCard h1 rIndex (c1:cardList)
-
-listToHand :: [Card] -> Hand
-listToHand cards = foldr (\x -> (Add (x))) Empty cards
-
 --shuffle :: StdGen -> Hand -> Hand
---shuffle S
-oneRandomInteger :: StdGen -> Integer
-oneRandomInteger g = fst (randomR (0,10) g)
-{-
-twoRandomIntegers :: StdGen -> (Integer,Integer)
-twoRandomIntegers g = (n1, n2)
-  where (n1, g1) = randomR (0, 10) g
-        (n2, g2) = randomR (0, 10) g1
--}
---prop_shuffle_sameCards :: StdGen -> Card -> Hand -> Bool
---prop_shuffle_sameCards g c h =
---    c `belongsTo` h == c `belongsTo` shuffle g h
 
---belongsTo :: Card -> Hand -> Bool
---c `belongsTo` Empty = False
---c `belongsTo` (Add c′ h) = c == c′ || c `belongsTo` h
 
---prop_size_shuffle :: StdGen -> Hand -> Bool
+implementation = Interface
+  { iEmpty    = empty
+  , iFullDeck = fullDeck
+  , iValue    = value
+  , iGameOver = gameOver
+  , iWinner   = winner
+  , iDraw     = draw
+  , iPlayBank = playBank
+  , iShuffle  = shuffle
+  }
+
+main :: IO ()
+main = runGame implementation

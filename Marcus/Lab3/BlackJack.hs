@@ -12,7 +12,7 @@ module BlackJack where
 import Cards
 import RunGame
 import System.Random
-import Test.QuickCheck
+import Test.QuickCheck hiding (shuffle)
 
 empty :: Hand
 empty = Empty
@@ -97,7 +97,12 @@ playBank' deck bankHand =
            where (deck′,bankHand′) = draw deck bankHand
 --The bank draws cards until its score is 16 or higher, and then it stops.
 -}
---shuffle :: StdGen -> Hand -> Hand
+shuffle :: StdGen -> Hand -> Hand
+shuffle gen Empty = Empty
+
+shuffle gen hand = (Add newCard (shuffle randGen newDeck))
+                  where (randVal, randGen) = (randomR (1, size hand) gen )
+                        (newCard, newDeck) = (removeCard hand randVal [] )
 
 
 removeCard :: Hand -> Int -> [Card]-> (Card, Hand)
@@ -108,4 +113,13 @@ removeCard (Add c1 h1) rIndex cardList
 listToHand :: [Card] -> Hand
 listToHand cards = foldr (\x -> (Add (x))) Empty cards
 
--- prop_size_shuffle :: StdGen -> Hand -> Bool
+prop_shuffle_sameCards :: StdGen -> Card -> Hand -> Bool
+prop_shuffle_sameCards g c h =
+    c `belongsTo` h == c `belongsTo` shuffle g h
+
+belongsTo :: Card -> Hand -> Bool
+c `belongsTo` Empty = False
+c `belongsTo` (Add c' h) = c == c' || c `belongsTo` h
+
+prop_size_shuffle :: StdGen -> Hand -> Bool
+prop_size_shuffle g h = (size h == size (shuffle g h) )

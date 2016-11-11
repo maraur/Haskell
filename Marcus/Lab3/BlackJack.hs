@@ -75,9 +75,8 @@ prop_size_onTopOf :: Hand -> Hand -> Bool
 prop_size_onTopOf h1 h2 = size(h1 <+ h2) == (size(h1) + size(h2))
 
 fullDeck :: Hand
---fullDeck = foldr (\x -> makeSuit x (<+)) [] suits
-fullDeck = makeSuit Hearts <+ makeSuit Spades <+ makeSuit Diamonds
-          <+ makeSuit Clubs
+fullDeck = makeSuit Hearts <+ makeSuit Spades
+          <+ makeSuit Diamonds <+ makeSuit Clubs
 
 suits = [Hearts, Spades, Diamonds, Clubs]
 ranks = [Numeric n | n <- [2..10]] ++ [Jack, Queen, King, Ace]
@@ -96,13 +95,6 @@ playBank' deck bankHand =
            where (deck′,bankHand′) = draw deck bankHand
 --The bank draws cards until its score is 16 or higher, and then it stops.
 -}
-playBank' :: Hand -> Hand -> Hand
-playBank' deck bankHand | value bankHand < 15 = playBank' deck' bankHand'
-                        | otherwise           = bankHand
-  where (deck',bankHand') = draw deck bankHand
-
-playBank :: Hand -> Hand
-  playBank deck = playBank' deck Empty
 
 shuffle :: StdGen -> Hand -> Hand
 shuffle gen Empty = Empty

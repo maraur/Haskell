@@ -89,7 +89,6 @@ draw :: Hand -> Hand -> (Hand,Hand)
 draw Empty hand        = error "draw: The deck is empty."
 draw (Add c deck) hand = (deck, (Add c hand))
 
-
 {-
 playBank :: Hand -> Hand
 playBank deck =
@@ -97,9 +96,16 @@ playBank' deck bankHand =
            where (deck′,bankHand′) = draw deck bankHand
 --The bank draws cards until its score is 16 or higher, and then it stops.
 -}
+playBank' :: Hand -> Hand -> Hand
+playBank' deck bankHand | value bankHand < 15 = playBank' deck' bankHand'
+                        | otherwise           = bankHand
+  where (deck',bankHand') = draw deck bankHand
+
+playBank :: Hand -> Hand
+  playBank deck = playBank' deck Empty
+
 shuffle :: StdGen -> Hand -> Hand
 shuffle gen Empty = Empty
-
 shuffle gen hand = (Add newCard (shuffle randGen newDeck))
                   where (randVal, randGen) = (randomR (1, size hand) gen )
                         (newCard, newDeck) = (removeCard hand randVal [] )
@@ -123,3 +129,18 @@ c `belongsTo` (Add c' h) = c == c' || c `belongsTo` h
 
 prop_size_shuffle :: StdGen -> Hand -> Bool
 prop_size_shuffle g h = (size h == size (shuffle g h) )
+
+
+implementation = Interface
+  { iEmpty    = empty
+  , iFullDeck = fullDeck
+  , iValue    = value
+  , iGameOver = gameOver
+  , iWinner   = winner
+  , iDraw     = draw
+  , iPlayBank = playBank
+  , iShuffle  = shuffle
+  }
+
+main :: IO ()
+main = runGame implementation

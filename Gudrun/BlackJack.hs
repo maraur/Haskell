@@ -7,29 +7,17 @@ size hand2
   = 1 + 1 + 0
   = 2
   -}
-
+-----------------------------------------------------------------------------
 module BlackJack where
 import Cards
 import RunGame
 import Test.QuickCheck hiding (shuffle)
 import System.Random
 
-card_1 = Card (Numeric 8) Spades
-card_2 = Card {rank=King, suit=Hearts}
-card_3 = Card {rank=Ace, suit=Hearts}
-card_4 = Card {rank=(Numeric 2), suit=Hearts}
-card_5 = Card {rank=Ace, suit=Spades}
-
-hand_0 = Empty
-hand_1 = Add card_1 Empty
-hand_2 = Add card_2 hand_1
-hand_3 = Add card_3 hand_2
-hand_4 = Add card_4 hand_3
-hand_5 = Add card_5 hand_4
-
 empty :: Hand
 empty = Empty
 
+-----------------------------------------------------------------------------
 valueRank :: Rank -> Integer
 valueRank Ace         = 11
 valueRank (Numeric n) = n
@@ -51,16 +39,19 @@ value :: Hand -> Integer
 value h | valueHand h > 21  = valueHand h - 10 * numberOfAces h
         | otherwise         = valueHand h
 
+-----------------------------------------------------------------------------
 gameOver :: Hand -> Bool
 gameOver h | value h > 21 = True
            |otherwise     = False
 
+-----------------------------------------------------------------------------
 winner :: Hand -> Hand -> Player
 winner guest bank | gameOver guest                    = Bank
                   | gameOver bank                     = Guest
                   | valueHand guest > valueHand bank  = Guest
                   | otherwise                         = Bank
 
+-----------------------------------------------------------------------------
 (<+) :: Hand -> Hand -> Hand
 Empty <+ h2           = h2
 h1 <+ Empty           = h1
@@ -73,6 +64,7 @@ prop_onTopOf_assoc p1 p2 p3 =
 prop_size_onTopOf :: Hand -> Hand -> Bool
 prop_size_onTopOf h1 h2 = (size h1 + size h2) == size (h1 <+ h2)
 
+-----------------------------------------------------------------------------
 rankList :: [Rank]
 rankList = [Numeric n | n <- [2..10]] ++ [Jack, Queen, King, Ace]
 
@@ -87,6 +79,7 @@ draw :: Hand -> Hand -> (Hand,Hand)
 draw Empty _              = error "draw: The deck is empty."
 draw (Add card deck) hand = (deck, Add card hand)
 
+-----------------------------------------------------------------------------
 playBank' :: Hand -> Hand -> Hand
 playBank' deck bankHand | value bankHand < 16 = playBank' deck' bankHand'
                         | otherwise           = bankHand
@@ -95,6 +88,7 @@ playBank' deck bankHand | value bankHand < 16 = playBank' deck' bankHand'
 playBank :: Hand -> Hand
 playBank deck = playBank' deck Empty
 
+-----------------------------------------------------------------------------
 removeCard :: Hand ->  Hand -> Integer -> (Card, Hand)
 removeCard (Add c h1) h2 1        = (c, h1 <+ h2)
 removeCard h1         h2 index   = removeCard h1' h2' (index-1)
@@ -105,7 +99,6 @@ shuffle g Empty = Empty
 shuffle g h     = Add card' (shuffle g1 hand')
   where (card', hand')  = removeCard h Empty index
         (index, g1)     = randomR (1, size h) g
-
 
 prop_shuffle_sameCards :: StdGen -> Card -> Hand -> Bool
 prop_shuffle_sameCards g c h =
@@ -118,6 +111,7 @@ c `belongsTo` (Add c' h) = c == c' || c `belongsTo` h
 prop_size_shuffle :: StdGen -> Hand -> Bool
 prop_size_shuffle g h = size h == size (shuffle g h)
 
+-----------------------------------------------------------------------------
 implementation = Interface
   { iEmpty    = empty
   , iFullDeck = fullDeck

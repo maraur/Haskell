@@ -1,6 +1,8 @@
 module Sudoku where
 
 import Test.QuickCheck
+import Data.Char (ord, chr, isDigit, digitToInt, intToDigit)
+import Data.Ord
 
 -------------------------------------------------------------------------
 example =
@@ -15,7 +17,7 @@ example =
     , [Nothing,Just 8, Just 3, Nothing,Nothing,Nothing,Nothing,Just 6, Nothing]
     , [Nothing,Nothing,Just 7, Just 6, Just 9, Nothing,Nothing,Just 4, Just 3]
     ]
--
+
 data Sudoku = Sudoku { rows :: [[Maybe Int]] }
  deriving ( Show, Eq )
 
@@ -47,7 +49,14 @@ isRowSolved = all (\x -> x /= Nothing)
 
 -- printSudoku sud prints a representation of the sudoku sud on the screen
 printSudoku :: Sudoku -> IO ()
-printSudoku = undefined
+printSudoku sud = mapM_ putStrLn(map makeLine (rows sud))
+
+makeLine :: [Maybe Int] -> String
+makeLine = map makeChar
+
+makeChar :: Maybe Int -> Char
+makeChar Nothing = '.'
+makeChar (Just n) = intToDigit n
 
 -- readSudoku file reads from the file, and either delivers it, or stops
 -- if the file did not contain a sudoku

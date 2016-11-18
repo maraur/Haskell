@@ -61,8 +61,17 @@ makeChar (Just n) = intToDigit n
 -- readSudoku file reads from the file, and either delivers it, or stops
 -- if the file did not contain a sudoku
 readSudoku :: FilePath -> IO Sudoku
-readSudoku = undefined
+readSudoku file = do s <- readFile file
+                     let l = lines s
+                     let sud = Sudoku(map makeSudokuLine l)
+                     return sud
 
+makeSudokuLine :: [Char] -> [Maybe Int]
+makeSudokuLine = map makeSudokuChar
+
+makeSudokuChar :: Char -> Maybe Int
+makeSudokuChar '.' = Nothing
+makeSudokuChar n | isDigit n = (Just (digitToInt n))
 -------------------------------------------------------------------------
 
 -- cell generates an arbitrary cell in a Sudoku

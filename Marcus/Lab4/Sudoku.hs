@@ -3,6 +3,7 @@ module Sudoku where
 import Test.QuickCheck
 import Data.Char (ord, chr, isDigit, digitToInt, intToDigit)
 import Data.Ord
+import System.Random
 
 -------------------------------------------------------------------------
 example =
@@ -76,7 +77,13 @@ makeSudokuChar n | isDigit n = (Just (digitToInt n))
 
 -- cell generates an arbitrary cell in a Sudoku
 cell :: Gen (Maybe Int)
-cell = undefined
+cell = frequency [(9, nothingCell),(1,numberCell)]
+
+nothingCell :: Gen (Maybe Int)
+nothingCell = elements [Nothing]
+
+numberCell :: Gen (Maybe Int)
+numberCell = elements [Just n|n<-[1..9]]
 
 -- an instance for generating Arbitrary Sudokus
 instance Arbitrary Sudoku where
@@ -84,4 +91,6 @@ instance Arbitrary Sudoku where
     do rows <- sequence [ sequence [ cell | j <- [1..9] ] | i <- [1..9] ]
        return (Sudoku rows)
 
+prop_Sudoku :: Sudoku -> Bool
+prop_Sudoku = isSudoku
 -------------------------------------------------------------------------

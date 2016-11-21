@@ -3,6 +3,7 @@ module Sudoku where
 import Test.QuickCheck
 import Data.Char
 import Data.Maybe
+import Data.List
 -------------------------------------------------------------------------
 
 data Sudoku = Sudoku { rows :: [[Maybe Int]] }
@@ -25,31 +26,11 @@ example =
      n = Nothing
      j = Just
 
-
-example1 :: Sudoku
-example1 =
-          Sudoku
-            [ [j 3,j 6,j 9,j 5,j 7,j 1,j 2,j 2,j 4]
-            , [j 3,j 6,j 9,j 5,j 7,j 1,j 2,j 2,j 4]
-            , [j 3,j 6,j 9,j 5,j 7,j 1,j 2,j 2,j 4]
-            , [j 3,j 6,j 9,j 5,j 7,j 1,j 2,j 2,j 4]
-            , [n  ,n  ,j 7,j 6,j 9,n  ,n  ,j 4,j 3]
-            , [j 3,j 6,j 9,j 5,j 7,j 1,j 2,j 2,j 4]
-            , [j 3,j 6,j 9,j 5,j 7,j 1,j 2,j 2,j 4]
-            , [j 3,j 6,j 9,j 5,j 7,j 1,j 2,j 2,j 4]
-            , [j 3,j 6,j 9,j 5,j 7,j 1,j 2,j 2,j 4]
-            ]
-        where
-          n = Nothing
-          j = Just
-
--- allBlankSudoku is a sudoku with just blanks
 allBlankSudoku :: Sudoku
 allBlankSudoku = Sudoku {rows = replicate 9 (replicate 9 Nothing)}
 
 -------------------------------------------------------------------------
--- isSudoku sud checks if sud is really a valid representation of a sudoku
--- puzzle
+
 isSudoku :: Sudoku -> Bool
 isSudoku sud = isValidRows x && isValidColumns x && isValidNumbers x
   where x = rows sud
@@ -65,38 +46,38 @@ isValidNumbers :: [[Maybe Int]] -> Bool
 isValidNumbers xxs = and [and [x `elem` [1..9] | Just x <- xs ] | xs <- xxs]
 
 -------------------------------------------------------------------------
--- isSolved sud checks if sud is already solved, i.e. there are no blanks
+
 isSolved :: Sudoku -> Bool
-isSolved sud = and [and [x /= Nothing | x <- xs ] | xs <- rows sud]
+isSolved sud = and [and [isJust x | x <- xs ] | xs <- rows sud]
 
 -------------------------------------------------------------------------
 
--- printSudoku sud prints a representation of the sudoku sud on the screen
 printSudoku :: Sudoku -> IO ()
-printSudoku sud = mapM_ putStrLn (map maybeToChar (rows sud))
+printSudoku sud = mapM_ (putStrLn . maybeToChar) (rows sud)
 
 maybeToChar:: [Maybe Int] -> String
-maybeToChar row = map (maybe '.' intToDigit) row
+maybeToChar = map (maybe '.' intToDigit)
 
--- readSudoku file reads from the file, and either delivers it, or stops
--- if the file did not contain a sudoku
 readSudoku :: FilePath -> IO Sudoku
 readSudoku path = do  s <- readFile path
                       let l = lines s
-                      return (Sudoku (map stringToMaybe l))
+                      let sud = Sudoku (map stringToMaybe l)
+                      if not (isSudoku sud)
+                        then error "Not sudoku"
+                        else return sud
 
-stringToMaybe :: [Char] -> [Maybe Int]
-stringToMaybe s = map charToMaybe s
+stringToMaybe :: String -> [Maybe Int]
+stringToMaybe = map charToMaybe
 
 charToMaybe :: Char -> Maybe Int
 charToMaybe '.' = Nothing
 charToMaybe n | isDigit n = Just (digitToInt n)
+charToMaybe _ = error "Not sudoku"
 
 -------------------------------------------------------------------------
 
 -- cell generates an arbitrary cell in a Sudoku
 cell :: Gen (Maybe Int)
---cell = elements [Just n|n<-[1..9]]
 cell = frequency [(9,rNothing), (1,rNumeric)]
 
 rNumeric :: Gen (Maybe Int)
@@ -113,4 +94,31 @@ instance Arbitrary Sudoku where
 
 prop_Sudoku :: Sudoku -> Bool
 prop_Sudoku = isSudoku
+
 -------------------------------------------------------------------------
+
+type Block = [Maybe Int]
+
+isOkayBlock :: Block -> Bool
+isOkayBlock []            = True
+isOkayBlock (Nothing:xs)  = True && isOkayBlock xs
+isOkayBlock (x:xs)        = (x `notElem` xs) && isOkayBlock xs
+
+blocks :: Sudoku -> [Block]
+blocks sud = sudokuRows ++ transpose sudokuRows ++ getBlocks sudokuRows
+       where sudokuRows = rows sud
+
+getBlocks :: [[Maybe Int]] -> [Block]
+getBlocks rows = [square (x,y) rows | x <- [0..2], y <- [0..2]]
+
+square :: (Int, Int) -> [[Maybe Int]] -> Block
+square (x,y) rows = concat
+          [take 3 (drop (3*x) row) | row <- take 3 (drop (3*y) rows)]
+
+prop_validBlocks :: Sudoku -> Bool
+prop_validBlocks sud = length sudokuBlocks == 27 &&
+                 and [length x == 9| x <- sudokuBlocks]
+                 where sudokuBlocks = blocks sud
+
+isOkay :: Sudoku -> Bool
+isOkay sud = all isOkayBlock (rows sud)

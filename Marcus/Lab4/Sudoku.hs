@@ -118,4 +118,4 @@ prop_validBlocks sud = length (sudokuBlocks) == 27 &&
                  where sudokuBlocks = blocks sud
 
 isOkay :: Sudoku -> Bool
-isOkay = undefined
+isOkay sud = and [isOkayBlock block | block <- blocks sud]

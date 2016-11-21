@@ -36,7 +36,7 @@ isValidRow :: [Maybe Int] -> Bool
 isValidRow = all (\x -> isValidNumber x)
 
 isValidNumber :: Maybe Int -> Bool
-isValidNumber Nothing = True
+isValidNumber Nothing  = True
 isValidNumber (Just n) = (n < 10) && (n > 0)
 
 -- isSolved sud checks if sud is already solved, i.e. there are no blanks
@@ -56,7 +56,7 @@ makeLine :: [Maybe Int] -> String
 makeLine = map makeChar
 
 makeChar :: Maybe Int -> Char
-makeChar Nothing = '.'
+makeChar Nothing  = '.'
 makeChar (Just n) = intToDigit n
 
 -- readSudoku file reads from the file, and either delivers it, or stops
@@ -65,14 +65,17 @@ readSudoku :: FilePath -> IO Sudoku
 readSudoku file = do s <- readFile file
                      let l = lines s
                      let sud = Sudoku(map makeSudokuLine l)
-                     return sud
+                     if not(isSudoku sud)
+                       then error "Program error: Not a Sudoku!"
+                       else return sud
 
 makeSudokuLine :: [Char] -> [Maybe Int]
 makeSudokuLine = map makeSudokuChar
 
 makeSudokuChar :: Char -> Maybe Int
-makeSudokuChar '.' = Nothing
+makeSudokuChar '.'           = Nothing
 makeSudokuChar n | isDigit n = Just (digitToInt n)
+makeSudokuChar _             = error "Program error: Not a Sudoku!"
 -------------------------------------------------------------------------
 
 -- cell generates an arbitrary cell in a Sudoku
@@ -97,9 +100,9 @@ prop_Sudoku = isSudoku
 type Block = [Maybe Int]
 
 isOkayBlock :: Block -> Bool
-isOkayBlock []          = True
+isOkayBlock []           = True
 isOkayBlock (Nothing:xs) = True && isOkayBlock xs
-isOkayBlock (x:xs)      = (x `notElem` xs) && isOkayBlock xs
+isOkayBlock (x:xs)       = (x `notElem` xs) && isOkayBlock xs
 
 blocks :: Sudoku -> [Block]
 blocks sud = sudokuRows ++ (transpose sudokuRows) ++ makeBlocks sud

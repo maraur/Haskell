@@ -4,7 +4,7 @@ import Test.QuickCheck
 import Data.Char (ord, chr, isDigit, digitToInt, intToDigit)
 import Data.Ord
 import System.Random
-
+import Data.List
 -------------------------------------------------------------------------
 example =
   Sudoku
@@ -24,7 +24,7 @@ data Sudoku = Sudoku { rows :: [[Maybe Int]] }
 
 -- allBlankSudoku is a sudoku with just blanks
 allBlankSudoku :: Sudoku
-allBlankSudoku = Sudoku[[Nothing | x <- [1..8]] | y <- [1..9]]
+allBlankSudoku = Sudoku[[Nothing | x <- [1..9]] | y <- [1..9]]
 
 -- isSudoku sud checks if sud is really a valid representation of a sudoku
 -- puzzle
@@ -102,10 +102,20 @@ isOkayBlock (Nothing:xs) = True && isOkayBlock xs
 isOkayBlock (x:xs)      = (x `notElem` xs) && isOkayBlock xs
 
 blocks :: Sudoku -> [Block]
-blocks = undefined
+blocks sud = sudokuRows ++ (transpose sudokuRows) ++ makeBlocks sud
+       where sudokuRows = rows sud
+
+makeBlocks :: Sudoku -> [Block]
+makeBlocks sud = [square (x,y) sud | x <- [0..2], y <- [0..2]]
+
+square :: (Int, Int) -> Sudoku -> Block
+square (x,y) sud = concat
+          [take 3 (drop (3*x) row) | row <-(take 3 (drop (3*y) (rows sud)))]
 
 prop_validBlocks :: Sudoku -> Bool
-prop_validBlocks = undefined
+prop_validBlocks sud = length (sudokuBlocks) == 27 &&
+                 and [length x == 9| x <- sudokuBlocks]
+                 where sudokuBlocks = blocks sud
 
 isOkay :: Sudoku -> Bool
 isOkay = undefined

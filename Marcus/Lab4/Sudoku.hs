@@ -50,7 +50,7 @@ isRowSolved = all (\x -> x /= Nothing)
 
 -- printSudoku sud prints a representation of the sudoku sud on the screen
 printSudoku :: Sudoku -> IO ()
-printSudoku sud = mapM_ putStrLn(map makeLine (rows sud))
+printSudoku sud = mapM_ (putStrLn . makeLine) (rows sud)
 
 makeLine :: [Maybe Int] -> String
 makeLine = map makeChar
@@ -72,7 +72,7 @@ makeSudokuLine = map makeSudokuChar
 
 makeSudokuChar :: Char -> Maybe Int
 makeSudokuChar '.' = Nothing
-makeSudokuChar n | isDigit n = (Just (digitToInt n))
+makeSudokuChar n | isDigit n = Just (digitToInt n)
 -------------------------------------------------------------------------
 
 -- cell generates an arbitrary cell in a Sudoku
@@ -94,3 +94,18 @@ instance Arbitrary Sudoku where
 prop_Sudoku :: Sudoku -> Bool
 prop_Sudoku = isSudoku
 -------------------------------------------------------------------------
+type Block = [Maybe Int]
+
+isOkayBlock :: Block -> Bool
+isOkayBlock []          = True
+isOkayBlock (Nothing:xs) = True && isOkayBlock xs
+isOkayBlock (x:xs)      = (x `notElem` xs) && isOkayBlock xs
+
+blocks :: Sudoku -> [Block]
+blocks = undefined
+
+prop_validBlocks :: Sudoku -> Bool
+prop_validBlocks = undefined
+
+isOkay :: Sudoku -> Bool
+isOkay = undefined

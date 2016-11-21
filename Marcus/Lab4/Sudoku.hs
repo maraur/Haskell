@@ -29,11 +29,11 @@ allBlankSudoku = Sudoku[[Nothing | x <- [1..9]] | y <- [1..9]]
 -- isSudoku sud checks if sud is really a valid representation of a sudoku
 -- puzzle
 isSudoku :: Sudoku -> Bool
-isSudoku sud = (length (rows sud) == 9) &&
-                  (all (\x -> (length x == 9) && (isValidRow x)) (rows sud))
+isSudoku sud = length (rows sud) == 9 &&
+                  all (\x -> (length x == 9) && isValidRow x) (rows sud)
 
 isValidRow :: [Maybe Int] -> Bool
-isValidRow = all (\x -> isValidNumber x)
+isValidRow = all isValidNumber
 
 isValidNumber :: Maybe Int -> Bool
 isValidNumber Nothing  = True
@@ -41,10 +41,10 @@ isValidNumber (Just n) = (n < 10) && (n > 0)
 
 -- isSolved sud checks if sud is already solved, i.e. there are no blanks
 isSolved :: Sudoku -> Bool
-isSolved sud = all (\x -> isRowSolved x) (rows sud)
+isSolved sud = all isRowSolved (rows sud)
 
 isRowSolved :: [Maybe Int] -> Bool
-isRowSolved = all (\x -> x /= Nothing)
+isRowSolved = notElem Nothing
 
 -------------------------------------------------------------------------
 
@@ -105,7 +105,7 @@ isOkayBlock (Nothing:xs) = True && isOkayBlock xs
 isOkayBlock (x:xs)       = (x `notElem` xs) && isOkayBlock xs
 
 blocks :: Sudoku -> [Block]
-blocks sud = sudokuRows ++ (transpose sudokuRows) ++ makeBlocks sud
+blocks sud = sudokuRows ++ transpose sudokuRows ++ makeBlocks sud
        where sudokuRows = rows sud
 
 makeBlocks :: Sudoku -> [Block]
@@ -113,10 +113,10 @@ makeBlocks sud = [square (x,y) sud | x <- [0..2], y <- [0..2]]
 
 square :: (Int, Int) -> Sudoku -> Block
 square (x,y) sud = concat
-          [take 3 (drop (3*x) row) | row <-(take 3 (drop (3*y) (rows sud)))]
+          [take 3 (drop (3*x) row) | row <- take 3 (drop (3*y) (rows sud))]
 
 prop_validBlocks :: Sudoku -> Bool
-prop_validBlocks sud = length (sudokuBlocks) == 27 &&
+prop_validBlocks sud = length sudokuBlocks == 27 &&
                  and [length x == 9| x <- sudokuBlocks]
                  where sudokuBlocks = blocks sud
 

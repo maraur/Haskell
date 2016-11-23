@@ -132,8 +132,41 @@ blanks sud = [snd x | x <- addPosition sud, isNothing (fst x)]
 
 --Helper function that adds the position of each element as the second element of a pair
 addPosition :: Sudoku -> [(Maybe Int, Pos)]
-addPosition sud = zip (concat[x | x <- rows sud])
+addPosition sud = zip (concat (rows sud))
                             [(a,b) | a<-[0..8], b<-[0..8]]
 
 prop_blanks:: Sudoku -> Bool
 prop_blanks sud = and [isNothing ((rows sud!!a)!!b) | (a,b)<-blanks sud ]
+
+-------------------------------------------------------------------------
+--TODO: How can I put the limit that the index cant be bigger than the length?
+
+(!!=) :: [a] -> (Int,a) -> [a]
+[] !!= _                  = []
+--list !!= (i, _ ) | i > length list = list
+list !!= (i, newElement)  = take i list ++ [newElement] ++ drop (i+1) list
+
+--TODO: FIX, quickcheck gives errors
+prop_updateList:: [a] ->(NonNegative Int, a) -> Bool
+prop_updateList list (NonNegative i, newElement) = i <= length list
+
+prop_size_updateList:: [a] ->(NonNegative Int, a) -> Bool
+prop_size_updateList list (NonNegative i,newElement) =
+    length list == length (list !!= (i,newElement))
+
+-------------------------------------------------------------------------
+--TODO: See if it can look better
+update :: Sudoku -> Pos -> Maybe Int -> Sudoku
+update sud (posA, posB) newValue =
+        Sudoku (rows sud !!= newRow)
+            where oldRow = rows sud!!posA
+                  newRow = (posA, oldRow !!= (posB, newValue))
+
+--TODO: Fix
+prop_update :: Sudoku -> (NonNegative Int, NonNegative Int) -> Maybe Int -> Bool
+prop_update sud (NonNegative posA, NonNegative posB) newValue =
+                    updatedSud!!posA!!posB == newValue
+    where updatedSud = rows (update sud (posA,posB) newValue)
+
+--candidates :: Sudoku -> Pos -> [Int]
+--candidates sud (posA,posB) =

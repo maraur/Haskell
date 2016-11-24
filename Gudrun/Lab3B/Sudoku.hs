@@ -139,34 +139,44 @@ prop_blanks:: Sudoku -> Bool
 prop_blanks sud = and [isNothing ((rows sud!!a)!!b) | (a,b)<-blanks sud ]
 
 -------------------------------------------------------------------------
---TODO: How can I put the limit that the index cant be bigger than the length?
-
 (!!=) :: [a] -> (Int,a) -> [a]
 [] !!= _                  = []
---list !!= (i, _ ) | i > length list = list
-list !!= (i, newElement)  = take i list ++ [newElement] ++ drop (i+1) list
+list !!= (i, _ ) | i<0 || i >= length list = list
+list !!= (i, newElement) = take i list ++ [newElement] ++ drop (i+1) list
 
---TODO: FIX, quickcheck gives errors
-prop_updateList:: [a] ->(NonNegative Int, a) -> Bool
-prop_updateList list (NonNegative i, newElement) = i <= length list
+-- Checks if new element has actually been updated in the list
+prop_updateList:: Eq a => [a] ->(NonNegative Int, a) -> Bool
+prop_updateList list (NonNegative i, _) | i >= length list = True
+prop_updateList list (NonNegative i, element) = list'!!i == element
+      where list' = (list !!= (i,element))
 
+-- Checks if the sizes of old and new list are the same
 prop_size_updateList:: [a] ->(NonNegative Int, a) -> Bool
-prop_size_updateList list (NonNegative i,newElement) =
-    length list == length (list !!= (i,newElement))
+prop_size_updateList list (NonNegative i,newE) = length list == length list'
+          where list' = (list !!= (i,newE))
+
 
 -------------------------------------------------------------------------
---TODO: See if it can look better
 update :: Sudoku -> Pos -> Maybe Int -> Sudoku
 update sud (posA, posB) newValue =
-        Sudoku (rows sud !!= newRow)
+      Sudoku (rows sud !!= (posA, newRow))
             where oldRow = rows sud!!posA
-                  newRow = (posA, oldRow !!= (posB, newValue))
+                  newRow = oldRow !!= (posB, newValue)
 
---TODO: Fix
-prop_update :: Sudoku -> (NonNegative Int, NonNegative Int) -> Maybe Int -> Bool
-prop_update sud (NonNegative posA, NonNegative posB) newValue =
+prop_update :: Sudoku -> ValidIndex -> Maybe Int -> Bool
+prop_update sud (ValidIndex (posA,posB)) newValue =
                     updatedSud!!posA!!posB == newValue
     where updatedSud = rows (update sud (posA,posB) newValue)
+
+data ValidIndex = ValidIndex Pos
+    deriving ( Show, Eq )
+
+-- an instance for generating Arbitrary valid indices
+instance Arbitrary ValidIndex where
+    arbitrary =
+      do  a <- choose(0,8)
+          b <- choose(0,8)
+          return (ValidIndex (a,b))
 
 --candidates :: Sudoku -> Pos -> [Int]
 --candidates sud (posA,posB) =

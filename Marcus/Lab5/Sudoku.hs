@@ -5,7 +5,21 @@ import Data.Char (ord, chr, isDigit, digitToInt, intToDigit)
 import Data.Ord
 import System.Random
 import Data.List
+import Data.Maybe
 -------------------------------------------------------------------------
+example =
+  Sudoku
+    [ [Just 3, Just 6, Nothing,Nothing,Just 7, Just 1, Just 2, Nothing,Nothing]
+    , [Nothing,Just 5, Nothing,Nothing,Nothing,Nothing,Just 1, Just 8, Nothing]
+    , [Nothing,Nothing,Just 9, Just 2, Nothing,Just 4, Just 7, Nothing,Nothing]
+    , [Nothing,Nothing,Nothing,Nothing,Just 1, Just 3, Nothing,Just 2, Just 8]
+    , [Just 4, Nothing,Nothing,Just 5, Nothing,Just 2, Nothing,Nothing,Just 9]
+    , [Just 2, Just 7, Nothing,Just 4, Just 6, Nothing,Nothing,Nothing,Nothing]
+    , [Nothing,Nothing,Just 5, Just 3, Nothing,Just 8, Just 9, Nothing,Nothing]
+    , [Nothing,Just 8, Just 3, Nothing,Nothing,Nothing,Nothing,Just 6, Nothing]
+    , [Nothing,Nothing,Just 7, Just 6, Just 9, Nothing,Nothing,Just 4, Just 3]
+    ]
+
 data Sudoku = Sudoku { rows :: [[Maybe Int]] }
  deriving ( Show, Eq )
 
@@ -109,3 +123,24 @@ prop_validBlocks sud = length sudokuBlocks == 27 &&
 
 isOkay :: Sudoku -> Bool
 isOkay sud = and [isOkayBlock block | block <- blocks sud]
+---------------------------------------------------------------------------
+-- Part E
+---------------------------------------------------------------------------
+
+type Pos = (Int,Int)
+
+blanks :: Sudoku -> [Pos]
+blanks sud = [(x,y) | x <- [0..8], y <- [0..8], isNothing(getPos (x,y) sud)]
+
+getPos :: Pos -> Sudoku -> Maybe Int
+getPos (x,y) sud = ((rows sud)!!y)!!x
+
+(!!=) :: [a] -> (Int,a) -> [a]
+(!!=) = undefined
+
+update :: Sudoku -> Pos -> Maybe Int -> Sudoku
+update = undefined
+
+candidates :: Sudoku -> Pos -> [Int]
+candidates = undefined
+---------------------------------------------------------------------------

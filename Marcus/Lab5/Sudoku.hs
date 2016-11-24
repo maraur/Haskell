@@ -135,6 +135,8 @@ blanks sud = [(x,y) | x <- [0..8], y <- [0..8], isNothing(getPos (x,y) sud)]
 getPos :: Pos -> Sudoku -> Maybe Int
 getPos (x,y) sud = ((rows sud)!!y)!!x
 
+prop_areBlanks sud = and [getPos x sud == Nothing | x <- blanks sud]
+
 (!!=) :: [a] -> (Int,a) -> [a]
 (!!=) = undefined
 

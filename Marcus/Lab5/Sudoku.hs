@@ -126,7 +126,7 @@ isOkay sud = and [isOkayBlock block | block <- blocks sud]
 ---------------------------------------------------------------------------
 -- Part E
 ---------------------------------------------------------------------------
-
+-- Part E1
 type Pos = (Int,Int)
 
 blanks :: Sudoku -> [Pos]
@@ -135,14 +135,30 @@ blanks sud = [(x,y) | x <- [0..8], y <- [0..8], isNothing(getPos (x,y) sud)]
 getPos :: Pos -> Sudoku -> Maybe Int
 getPos (x,y) sud = ((rows sud)!!y)!!x
 
+prop_areBlanks :: Sudoku -> Bool
 prop_areBlanks sud = and [getPos x sud == Nothing | x <- blanks sud]
 
-(!!=) :: [a] -> (Int,a) -> [a]
-(!!=) = undefined
+-- Part E2
 
+(!!=) :: [a] -> (Int,a) -> [a]
+(!!=) xs (pos,val) = take pos xs ++ [val] ++ drop (pos+1) xs
+
+prop_addedElem :: Eq a => [a] -> (NonNegative Int,a) -> Bool
+prop_addedElem xs (NonNegative pos,val) | pos >= length xs = True
+-- Better way to do this? ^^^^^^^^^^
+prop_addedElem xs (NonNegative pos,val) = (((xs !!= (pos,val)) !! pos) == val)
+
+prop_correctSize :: [a] -> (NonNegative Int, a) -> Bool
+prop_correctSize xs (NonNegative pos,val) | pos >= length xs = True
+-- Better way to do this? ^^^^^^^^^^
+prop_correctSize xs (NonNegative pos,val) =
+                             (length xs) == length (xs !!= (pos,val))
+
+-- Part E3
 update :: Sudoku -> Pos -> Maybe Int -> Sudoku
 update = undefined
 
+-- Part E4
 candidates :: Sudoku -> Pos -> [Int]
 candidates = undefined
 ---------------------------------------------------------------------------

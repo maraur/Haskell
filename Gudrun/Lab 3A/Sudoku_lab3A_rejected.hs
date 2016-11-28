@@ -5,7 +5,23 @@ import Data.Char
 import Data.Maybe
 import Data.List
 -------------------------------------------------------------------------
+{- Comments:
+allBlankSudoku: okay
+isSudoku: you can define all your helper functions local because they are not used elsewhere
+isSolved: You can simplify that a bit by either first concatenate the rows and then check just one list or by just writing "xs <- rows sud, x <- xs" in the list comprehension
+Assignment B
+printSudoku: good
+readSudoku: good
+Assignment C
+cell: you can just use "return Nothing" in rNumeric and try to use choose(1,9) in rNumeric
+prop_Sudoku: good
+Assignment D
+isOkayBlock: your solution is rather long, can you come up with a shorter one?
+blocks: okay
+isOkay: okay
+Your submission is already pretty good. There are only some things you can try to improve.
 
+-}
 data Sudoku = Sudoku { rows :: [[Maybe Int]] }
  deriving ( Show, Eq )
 
@@ -32,17 +48,23 @@ allBlankSudoku = Sudoku {rows = replicate 9 (replicate 9 Nothing)}
 -------------------------------------------------------------------------
 
 isSudoku :: Sudoku -> Bool
-isSudoku sud = isValidRows && isValidColumns && isValidNumbers
+isSudoku sud = isValidRows x && isValidColumns x && isValidNumbers x
   where x = rows sud
-        isValidRows     = length x == 9
-        isValidColumns  = and [length x' == 9 | x' <- x]
-        isValidNumbers  = and [and [x'' `elem` [1..9] | Just x'' <- x' ] | x' <- x]
 
+isValidRows :: [[Maybe Int]] -> Bool
+isValidRows x = length x == 9
+
+isValidColumns :: [[Maybe Int]] -> Bool
+isValidColumns xs = and [length x == 9 | x <- xs]
+
+--Checks if all the numbers lie between 1 and 9
+isValidNumbers :: [[Maybe Int]] -> Bool
+isValidNumbers xxs = and [and [x `elem` [1..9] | Just x <- xs ] | xs <- xxs]
 
 -------------------------------------------------------------------------
 
 isSolved :: Sudoku -> Bool
-isSolved sud = and [isJust x | xs <- rows sud, x <- xs ]
+isSolved sud = and [and [isJust x | x <- xs ] | xs <- rows sud]
 
 -------------------------------------------------------------------------
 
@@ -75,11 +97,10 @@ cell :: Gen (Maybe Int)
 cell = frequency [(9,rNothing), (1,rNumeric)]
 
 rNumeric :: Gen (Maybe Int)
-rNumeric = do n <- choose(1,9)
-              return (Just n)
+rNumeric = elements [Just n | n <- [1..9]]
 
 rNothing :: Gen (Maybe Int)
-rNothing = return (Nothing)
+rNothing = elements [Nothing]
 
 -- an instance for generating Arbitrary Sudokus
 instance Arbitrary Sudoku where

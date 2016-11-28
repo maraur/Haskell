@@ -38,7 +38,6 @@ isSudoku sud = isValidRows && isValidColumns && isValidNumbers
         isValidColumns  = and [length x' == 9 | x' <- x]
         isValidNumbers  = and [and [x'' `elem` [1..9] | Just x'' <- x' ] | x' <- x]
 
-
 -------------------------------------------------------------------------
 
 isSolved :: Sudoku -> Bool
@@ -95,9 +94,8 @@ prop_Sudoku = isSudoku
 type Block = [Maybe Int]
 
 isOkayBlock :: Block -> Bool
-isOkayBlock []            = True
-isOkayBlock (Nothing:xs)  = True && isOkayBlock xs
-isOkayBlock (x:xs)        = (x `notElem` xs) && isOkayBlock xs
+isOkayBlock block = length list == length (nub list)
+    where list = catMaybes block
 
 blocks :: Sudoku -> [Block]
 blocks sud = sudokuRows ++ transpose sudokuRows ++ getBlocks sudokuRows

@@ -32,23 +32,16 @@ allBlankSudoku = Sudoku {rows = replicate 9 (replicate 9 Nothing)}
 -------------------------------------------------------------------------
 
 isSudoku :: Sudoku -> Bool
-isSudoku sud = isValidRows x && isValidColumns x && isValidNumbers x
+isSudoku sud = isValidRows && isValidColumns && isValidNumbers
   where x = rows sud
-
-isValidRows :: [[Maybe Int]] -> Bool
-isValidRows x = length x == 9
-
-isValidColumns :: [[Maybe Int]] -> Bool
-isValidColumns xs = and [length x == 9 | x <- xs]
-
---Checks if all the numbers lie between 1 and 9
-isValidNumbers :: [[Maybe Int]] -> Bool
-isValidNumbers xxs = and [and [x `elem` [1..9] | Just x <- xs ] | xs <- xxs]
+        isValidRows     = length x == 9
+        isValidColumns  = and [length x' == 9 | x' <- x]
+        isValidNumbers  = and [and [x'' `elem` [1..9] | Just x'' <- x' ] | x' <- x]
 
 -------------------------------------------------------------------------
 
 isSolved :: Sudoku -> Bool
-isSolved sud = and [and [isJust x | x <- xs ] | xs <- rows sud]
+isSolved sud = and [isJust x | xs <- rows sud, x <- xs ]
 
 -------------------------------------------------------------------------
 
@@ -81,10 +74,11 @@ cell :: Gen (Maybe Int)
 cell = frequency [(9,rNothing), (1,rNumeric)]
 
 rNumeric :: Gen (Maybe Int)
-rNumeric = elements [Just n | n <- [1..9]]
+rNumeric = do n <- choose(1,9)
+              return (Just n)
 
 rNothing :: Gen (Maybe Int)
-rNothing = elements [Nothing]
+rNothing = return Nothing
 
 -- an instance for generating Arbitrary Sudokus
 instance Arbitrary Sudoku where
@@ -100,9 +94,8 @@ prop_Sudoku = isSudoku
 type Block = [Maybe Int]
 
 isOkayBlock :: Block -> Bool
-isOkayBlock []            = True
-isOkayBlock (Nothing:xs)  = True && isOkayBlock xs
-isOkayBlock (x:xs)        = (x `notElem` xs) && isOkayBlock xs
+isOkayBlock block = length list == length (nub list)
+    where list = catMaybes block
 
 blocks :: Sudoku -> [Block]
 blocks sud = sudokuRows ++ transpose sudokuRows ++ getBlocks sudokuRows
@@ -148,20 +141,20 @@ list !!= (i, newElement) = take i list ++ [newElement] ++ drop (i+1) list
 prop_updateList:: Eq a => [a] ->(NonNegative Int, a) -> Bool
 prop_updateList list (NonNegative i, _) | i >= length list = True
 prop_updateList list (NonNegative i, element) = list'!!i == element
-      where list' = (list !!= (i,element))
+      where list' = list !!= (i,element)
 
 -- Checks if the sizes of old and new list are the same
 prop_size_updateList:: [a] ->(NonNegative Int, a) -> Bool
 prop_size_updateList list (NonNegative i,newE) = length list == length list'
-          where list' = (list !!= (i,newE))
+          where list' = list !!= (i,newE)
 
 
 -------------------------------------------------------------------------
 update :: Sudoku -> Pos -> Maybe Int -> Sudoku
 update sud (posA, posB) newValue =
-      Sudoku (rows sud !!= (posA, newRow))
-            where oldRow = rows sud!!posA
-                  newRow = oldRow !!= (posB, newValue)
+      Sudoku (rows sud !!= (posB, newRow))
+            where oldRow = rows sud!!posB
+                  newRow = oldRow !!= (posA, newValue)
 
 prop_update :: Sudoku -> ValidIndex -> Maybe Int -> Bool
 prop_update sud (ValidIndex (posA,posB)) newValue =
@@ -171,12 +164,33 @@ prop_update sud (ValidIndex (posA,posB)) newValue =
 data ValidIndex = ValidIndex Pos
     deriving ( Show, Eq )
 
--- an instance for generating Arbitrary valid indices
 instance Arbitrary ValidIndex where
     arbitrary =
       do  a <- choose(0,8)
           b <- choose(0,8)
           return (ValidIndex (a,b))
 
---candidates :: Sudoku -> Pos -> [Int]
---candidates sud (posA,posB) =
+listOfCandidates = [1..9]
+
+candidates :: Sudoku -> Pos -> [Int]
+candidates sud (posA,posB) = remove listOfCandidates blocks
+    where block1 = rows sud!!posB
+          block2 = transpose (rows sud)!!posA
+          block3 = square (getIndex posA, getIndex posB) (rows sud)
+          blocks = catMaybes (nub(block1++block2++block3))
+
+--TODO: A better way to do this?
+getIndex ::  Int -> Int
+getIndex x | x `elem` [0..2] = 0
+getIndex x | x `elem` [3..5] = 1
+getIndex x | x `elem` [6..8] = 2
+
+--Helper function that removes elements from list1 if they are in list2
+remove :: Eq a => [a] -> [a] -> [a]
+remove list1 list2 = [x | x<-list1, x `notElem` list2]
+
+prop_candidates :: Sudoku -> ValidIndex -> Bool
+prop_candidates sud (ValidIndex pos) | pos `elem` blanks sud = True
+prop_candidates sud (ValidIndex pos) = and [isSudoku s  | s <- updatedSudokus]
+      where cand = candidates sud pos
+            updatedSudokus = [update sud pos (Just x)| x <-cand]

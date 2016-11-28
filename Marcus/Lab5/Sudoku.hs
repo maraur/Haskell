@@ -30,22 +30,17 @@ allBlankSudoku = Sudoku[[Nothing | x <- [1..9]] | y <- [1..9]]
 -- isSudoku sud checks if sud is really a valid representation of a sudoku
 -- puzzle
 isSudoku :: Sudoku -> Bool
-isSudoku sud = length (rows sud) == 9 &&
-                  all (\x -> (length x == 9) && isValidRow x) (rows sud)
-
-isValidRow :: [Maybe Int] -> Bool
-isValidRow = all isValidNumber
-
-isValidNumber :: Maybe Int -> Bool
-isValidNumber Nothing  = True
-isValidNumber (Just n) = (n < 10) && (n > 0)
+isSudoku sud = isValidLength && isValidRowLength
+        where rowsSud          = rows sud
+              isValidLength    = length rowsSud == 9
+              isValidRowLength = all (\x -> (length x == 9)) (rowsSud)
+              isValidNumber    = and [ and [x `elem` validNumbers | x <- x']
+                                                | x' <- rowsSud]
+              validNumbers     = [Nothing] ++ [Just n | n <- [1..9]]
 
 -- isSolved sud checks if sud is already solved, i.e. there are no blanks
 isSolved :: Sudoku -> Bool
-isSolved sud = all isRowSolved (rows sud)
-
-isRowSolved :: [Maybe Int] -> Bool
-isRowSolved = notElem Nothing
+isSolved sud = and [isJust x | xs <- rows sud, x <- xs]
 
 -------------------------------------------------------------------------
 
@@ -84,10 +79,11 @@ cell :: Gen (Maybe Int)
 cell = frequency [(9, nothingCell),(1,numberCell)]
 
 nothingCell :: Gen (Maybe Int)
-nothingCell = elements [Nothing]
+nothingCell = return Nothing
 
 numberCell :: Gen (Maybe Int)
-numberCell = elements [Just n|n<-[1..9]]
+numberCell = do n <- choose(1,9)
+                return (Just n)
 
 -- an instance for generating Arbitrary Sudokus
 instance Arbitrary Sudoku where
@@ -101,9 +97,9 @@ prop_Sudoku = isSudoku
 type Block = [Maybe Int]
 
 isOkayBlock :: Block -> Bool
-isOkayBlock []           = True
-isOkayBlock (Nothing:xs) = True && isOkayBlock xs
-isOkayBlock (x:xs)       = (x `notElem` xs) && isOkayBlock xs
+isOkayBlock block = length xs == length (nub xs)
+                where xs = filter (/= Nothing) block
+
 
 blocks :: Sudoku -> [Block]
 blocks sud = sudokuRows ++ transpose sudokuRows ++ makeBlocks sud

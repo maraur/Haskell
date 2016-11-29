@@ -152,7 +152,32 @@ prop_correctSize xs (NonNegative pos,val) =
 
 -- Part E3
 update :: Sudoku -> Pos -> Maybe Int -> Sudoku
-update = undefined
+update sud (x,y) val = Sudoku(x' ++ [(xRow !!= (x,val))] ++ x'')
+              where xs  = rows sud
+                    x'   = take y xs
+                    xRow = concat (take 1 (drop y xs))
+                    x''  = drop (y+1) xs
+
+prop_update :: Sudoku -> ValidPos -> ValidValue -> Bool
+prop_update sud (ValidPos pos) (ValidValue val)
+                               = getPos pos (update sud pos val) == val
+
+data ValidPos = ValidPos Pos
+    deriving ( Show, Eq )
+
+instance Arbitrary ValidPos where
+    arbitrary =
+      do  a <- choose(0,8)
+          b <- choose(0,8)
+          return (ValidPos (a,b))
+
+data ValidValue = ValidValue (Maybe Int)
+    deriving ( Show, Eq )
+-- Really needed, might be able to just use Cell somehow?
+instance Arbitrary ValidValue where
+     arbitrary =
+       do  a <- cell
+           return (ValidValue a)
 
 -- Part E4
 candidates :: Sudoku -> Pos -> [Int]

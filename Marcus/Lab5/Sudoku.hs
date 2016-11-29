@@ -181,5 +181,14 @@ instance Arbitrary ValidValue where
 
 -- Part E4
 candidates :: Sudoku -> Pos -> [Int]
-candidates = undefined
+candidates sud (x,y) = [x | x <- [1..9], x `notElem` existing]
+      where rowX       = (rows sud) !! y
+            rowY       = (transpose (rows sud)) !! x
+            candSquare = square (squareRegion x, squareRegion y) sud
+            existing   = catMaybes (nub (rowX ++ rowY ++ candSquare))
+
+squareRegion :: Int -> Int
+squareRegion x | x `elem` [0..2] = 0
+               | x `elem` [3..5] = 1
+               | x `elem` [6..8] = 2
 ---------------------------------------------------------------------------

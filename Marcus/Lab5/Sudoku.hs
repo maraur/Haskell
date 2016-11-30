@@ -192,3 +192,41 @@ squareRegion x | x `elem` [0..2] = 0
                | x `elem` [3..5] = 1
                | x `elem` [6..8] = 2
 ---------------------------------------------------------------------------
+-- Part F1
+solve :: Sudoku -> Maybe Sudoku
+solve sud | isOkay sud = (solve' sud [])
+          | otherwise  = Nothing
+
+solve' :: Sudoku -> [Maybe Int] -> Maybe Sudoku
+solve' sud _            | isSolved sud         = Just sud
+solve' sud []    = solve' sud [Just n | n <- (candidates sud ((blanks sud)!!0))]
+solve' sud (cand:cands) | isSolved newSud       = Just newSud
+                        | null cCands           = Nothing
+                        | result == Nothing     = solve' sud cands
+                        | otherwise             = result
+           where blanks'       = blanks sud
+                 cCands        = [Just n | n <- candidates newSud (blanks'!!1)]
+                 newSud        = update sud (blanks'!!0) cand
+                 result        = solve' newSud cCands
+---------------------------------------------------------------------------
+-- Part F2
+readAndSolve :: FilePath -> IO ()
+readAndSolve file = do
+           s <- readSudoku file
+           let solved = fromJust(solve s)
+           printSudoku solved
+--------------------------------------------------------------------------
+-- Part F3
+coordinates = [(x,y) | x <- [0..8], y <- [0..8]]
+isSolutionOf :: Sudoku -> Sudoku -> Bool
+isSolutionOf solved _ | not(isOkay solved) || not(isSolved solved) = False
+isSolutionOf solved unSolved = and [getPos p solved == getPos p unSolved | p <- nonBlanks]
+            where nonBlanks = [n | n <- coordinates, n `notElem` (blanks unSolved)]
+
+
+--------------------------------------------------------------------------
+-- Part F4
+prop_SolveSound :: Sudoku -> Property
+prop_SolveSound sud = isOkay sud ==> isSolutionOf (fromJust (solve sud)) sud
+
+fewerChecks prop = quickCheckWith stdArgs{ maxSuccess = 30 } prop

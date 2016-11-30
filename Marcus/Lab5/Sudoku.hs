@@ -6,6 +6,10 @@ import Data.Ord
 import System.Random
 import Data.List
 import Data.Maybe
+--REMOVE!!!!
+import Debug.Trace
+debug = flip trace
+--REMOVE!!!!
 -------------------------------------------------------------------------
 example =
   Sudoku
@@ -47,6 +51,12 @@ isSolved sud = and [isJust x | xs <- rows sud, x <- xs]
 -- printSudoku sud prints a representation of the sudoku sud on the screen
 printSudoku :: Sudoku -> IO ()
 printSudoku sud = mapM_ (putStrLn . makeLine) (rows sud)
+
+makeStringSudoku :: Sudoku -> String
+makeStringSudoku sud = concat(map makeLineWithBreak (rows sud))
+
+makeLineWithBreak :: [Maybe Int] -> String
+makeLineWithBreak list = (makeLine list) ++ "\n"
 
 makeLine :: [Maybe Int] -> String
 makeLine = map makeChar
@@ -126,7 +136,7 @@ isOkay sud = and [isOkayBlock block | block <- blocks sud]
 type Pos = (Int,Int)
 
 blanks :: Sudoku -> [Pos]
-blanks sud = [(x,y) | x <- [0..8], y <- [0..8], isNothing(getPos (x,y) sud)]
+blanks sud = [(x,y) | y <- [0..8], x <- [0..8], isNothing(getPos (x,y) sud)]
 
 getPos :: Pos -> Sudoku -> Maybe Int
 getPos (x,y) sud = ((rows sud)!!y)!!x
@@ -201,13 +211,17 @@ solve' :: Sudoku -> [Maybe Int] -> Maybe Sudoku
 solve' sud _            | isSolved sud         = Just sud
 solve' sud []    = solve' sud [Just n | n <- (candidates sud ((blanks sud)!!0))]
 solve' sud (cand:cands) | isSolved newSud       = Just newSud
-                        | null cCands           = Nothing
-                        | result == Nothing     = solve' sud cands
+                        | null cCands           = if null cands
+                                                  then Nothing
+                                                  else solve' sud cands
+                        | result == Nothing     = if null cands
+                                                  then Nothing
+                                                  else solve' sud cands
                         | otherwise             = result
-           where blanks'       = blanks sud
-                 cCands        = [Just n | n <- candidates newSud (blanks'!!1)]
-                 newSud        = update sud (blanks'!!0) cand
-                 result        = solve' newSud cCands
+           where blanks'   = blanks sud
+                 newSud    = update sud (blanks'!!0) cand
+                 cCands    = [Just n | n <- candidates newSud (blanks'!!1)]
+                 result    = solve' newSud cCands `debug` (makeStringSudoku newSud)
 ---------------------------------------------------------------------------
 -- Part F2
 readAndSolve :: FilePath -> IO ()

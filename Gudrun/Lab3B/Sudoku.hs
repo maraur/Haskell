@@ -9,22 +9,40 @@ import Data.List
 data Sudoku = Sudoku { rows :: [[Maybe Int]] }
  deriving ( Show, Eq )
 
+
+example1 :: Sudoku
+example1 =
+      Sudoku
+        [ [j 1,n,j 7,j 2,j 3,j 8,j 5,n,j 9]
+        , [j 2,j 5,n,j 1,j 6,j 9,j 3,j 4,j 7]
+        , [j 3,j 6,j 9,j 4,j 5,j 7,j 1,j 2,j 8]
+        , [n,n,n,n,j 8,n,j 6,j 9,j 5]
+        , [j 5,j 8,j 2,j 6,j 9,j 1,n,n,j 3]
+        , [j 6,n,j 3,j 5,j 7,j 4,j 2,j 8,j 1]
+        , [j 7,j 1,j 4,j 8,j 2,j 3,j 9,j 5,j 6]
+        , [j 8,j 2,j 5,n,n,j 6,j 7,j 3,j 4]
+        , [j 9,j 3,j 6,j 7,j 4,j 5,j 8,j 1,n]
+        ]
+    where
+      n = Nothing
+      j = Just
+
 example :: Sudoku
 example =
-     Sudoku
-       [ [j 3,j 6,n  ,n  ,j 7,j 1,j 2,n  ,n  ]
-       , [n  ,j 5,n  ,n  ,n  ,n  ,j 1,j 8,n  ]
-       , [n  ,n  ,j 9,j 2,n  ,j 4,j 7,n  ,n  ]
-       , [n  ,n  ,n  ,n  ,j 1,j 3,n  ,j 2,j 8]
-       , [j 4,n  ,n  ,j 5,n  ,j 2,n  ,n  ,j 9]
-       , [j 2,j 7,n  ,j 4,j 6,n  ,n  ,n  ,n  ]
-       , [n  ,n  ,j 5,j 3,n  ,j 8,j 9,n  ,n  ]
-       , [n  ,j 8,j 3,n  ,n  ,n  ,n  ,j 6,n  ]
-       , [n  ,n  ,j 7,j 6,j 9,n  ,n  ,j 4,j 3]
-       ]
-   where
-     n = Nothing
-     j = Just
+          Sudoku
+            [ [j 3,j 6,n  ,n  ,j 7,j 1,j 2,n  ,n  ]
+            , [n  ,j 5,n  ,n  ,n  ,n  ,j 1,j 8,n  ]
+            , [n  ,n  ,j 9,j 2,n  ,j 4,j 7,n  ,n  ]
+            , [n  ,n  ,n  ,n  ,j 1,j 3,n  ,j 2,j 8]
+            , [j 4,n  ,n  ,j 5,n  ,j 2,n  ,n  ,j 9]
+            , [j 2,j 7,n  ,j 4,j 6,n  ,n  ,n  ,n  ]
+            , [n  ,n  ,j 5,j 3,n  ,j 8,j 9,n  ,n  ]
+            , [n  ,j 8,j 3,n  ,n  ,n  ,n  ,j 6,n  ]
+            , [n  ,n  ,j 7,j 6,j 9,n  ,n  ,j 4,j 3]
+            ]
+        where
+          n = Nothing
+          j = Just
 
 allBlankSudoku :: Sudoku
 allBlankSudoku = Sudoku {rows = replicate 9 (replicate 9 Nothing)}
@@ -121,12 +139,10 @@ isOkay sud = all isOkayBlock (rows sud)
 type Pos = (Int,Int)
 
 blanks :: Sudoku -> [Pos]
-blanks sud = [snd x | x <- addPosition sud, isNothing (fst x)]
+blanks sud = [(x,y) | y <- [0..8], x <- [0..8], isNothing(getPos (x,y) sud)]
 
---Helper function that adds the position of each element as the second element of a pair
-addPosition :: Sudoku -> [(Maybe Int, Pos)]
-addPosition sud = zip (concat (rows sud))
-                            [(a,b) | a<-[0..8], b<-[0..8]]
+getPos :: Pos -> Sudoku -> Maybe Int
+getPos (x,y) sud = ((rows sud)!!y)!!x
 
 prop_blanks:: Sudoku -> Bool
 prop_blanks sud = and [isNothing ((rows sud!!a)!!b) | (a,b)<-blanks sud ]
@@ -156,9 +172,10 @@ update sud (posA, posB) newValue =
             where oldRow = rows sud!!posB
                   newRow = oldRow !!= (posA, newValue)
 
-prop_update :: Sudoku -> ValidIndex -> Maybe Int -> Bool
-prop_update sud (ValidIndex (posA,posB)) newValue =
-                    updatedSud!!posA!!posB == newValue
+--TODO: newValue has to be Valid
+prop_update :: Sudoku -> ValidIndex -> ValidValue -> Bool
+prop_update sud (ValidIndex (posA,posB)) (ValidValue newValue) =
+                    updatedSud!!posB!!posA == newValue
     where updatedSud = rows (update sud (posA,posB) newValue)
 
 data ValidIndex = ValidIndex Pos
@@ -170,10 +187,18 @@ instance Arbitrary ValidIndex where
           b <- choose(0,8)
           return (ValidIndex (a,b))
 
-listOfCandidates = [1..9]
+data ValidValue = ValidValue (Maybe Int)
+  deriving (Show, Eq)
+
+instance Arbitrary ValidValue where
+     arbitrary =
+       do  a <- cell
+           return (ValidValue a)
+
+validValues = [1..9]
 
 candidates :: Sudoku -> Pos -> [Int]
-candidates sud (posA,posB) = remove listOfCandidates blocks
+candidates sud (posA,posB) = remove validValues blocks
     where block1 = rows sud!!posB
           block2 = transpose (rows sud)!!posA
           block3 = square (getIndex posA, getIndex posB) (rows sud)
@@ -191,6 +216,37 @@ remove list1 list2 = [x | x<-list1, x `notElem` list2]
 
 prop_candidates :: Sudoku -> ValidIndex -> Bool
 prop_candidates sud (ValidIndex pos) | pos `elem` blanks sud = True
-prop_candidates sud (ValidIndex pos) = and [isSudoku s  | s <- updatedSudokus]
+prop_candidates sud (ValidIndex pos) = and [isSudoku sud'  | sud' <- updatedSudokus]
       where cand = candidates sud pos
             updatedSudokus = [update sud pos (Just x)| x <-cand]
+
+-------------------------------------------------------------------------
+
+solve :: Sudoku -> Maybe Sudoku
+solve sud | not (isOkay sud)  = Nothing
+solve sud                     = solve' sud
+
+solve' :: Sudoku -> Maybe Sudoku
+solve' sud | isSolved sud = Just sud
+solve' sud = if noCandidates
+              then Nothing
+              else solve'' sud pos (c:candidates')
+                where pos:blanks' = blanks sud
+                      c:candidates' = candidates sud pos
+                      noCandidates = null (c:candidates')
+
+solve'' :: Sudoku -> Pos -> [Int] -> Maybe Sudoku
+solve'' sud pos [] = Nothing
+solve'' sud pos (c:candidates') | solve' (update sud pos (Just c)) == Nothing = solve'' sud pos candidates'
+solve'' sud pos (c:candidates') = solve' (update sud pos (Just c))
+
+readAndSolve :: FilePath -> IO ()
+readAndSolve path = do  s <- readSudoku path
+                        let a = fromJust (solve s)
+                        printSudoku a
+
+isSolutionOf :: Sudoku -> Sudoku -> Bool
+isSolutionOf sud1 sud2 = isSolved sud1 && isOkay sud1 && sameStartingValues
+  where  sameStartingValues = and [getPos(x,y) sud1 == getPos (x,y) sud2 | x<-[0..8], y<-[0..8],isJust (getPos (x,y) sud2)]
+
+--prop_SolveSound :: Sudoku -> Property

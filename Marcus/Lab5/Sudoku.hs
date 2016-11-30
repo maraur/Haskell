@@ -227,8 +227,11 @@ solve' sud (cand:cands) | isSolved newSud       = Just newSud
 readAndSolve :: FilePath -> IO ()
 readAndSolve file = do
            s <- readSudoku file
-           let solved = fromJust(solve s)
-           printSudoku solved
+           let result = solve s
+           if isNothing result
+             then putStrLn "No solution"
+             else printSudoku (fromJust result)
+
 --------------------------------------------------------------------------
 -- Part F3
 coordinates = [(x,y) | x <- [0..8], y <- [0..8]]

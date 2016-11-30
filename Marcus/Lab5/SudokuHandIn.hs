@@ -6,23 +6,7 @@ import Data.Ord
 import System.Random
 import Data.List
 import Data.Maybe
---REMOVE!!!!
-import Debug.Trace
-debug = flip trace
---REMOVE!!!!
 -------------------------------------------------------------------------
-example =
-  Sudoku
-    [ [Just 3, Just 6, Nothing,Nothing,Just 7, Just 1, Just 2, Nothing,Nothing]
-    , [Nothing,Just 5, Nothing,Nothing,Nothing,Nothing,Just 1, Just 8, Nothing]
-    , [Nothing,Nothing,Just 9, Just 2, Nothing,Just 4, Just 7, Nothing,Nothing]
-    , [Nothing,Nothing,Nothing,Nothing,Just 1, Just 3, Nothing,Just 2, Just 8]
-    , [Just 4, Nothing,Nothing,Just 5, Nothing,Just 2, Nothing,Nothing,Just 9]
-    , [Just 2, Just 7, Nothing,Just 4, Just 6, Nothing,Nothing,Nothing,Nothing]
-    , [Nothing,Nothing,Just 5, Just 3, Nothing,Just 8, Just 9, Nothing,Nothing]
-    , [Nothing,Just 8, Just 3, Nothing,Nothing,Nothing,Nothing,Just 6, Nothing]
-    , [Nothing,Nothing,Just 7, Just 6, Just 9, Nothing,Nothing,Just 4, Just 3]
-    ]
 
 data Sudoku = Sudoku { rows :: [[Maybe Int]] }
  deriving ( Show, Eq )
@@ -151,12 +135,10 @@ prop_areBlanks sud = and [isNothing (getPos x sud) | x <- blanks sud]
 
 prop_addedElem :: Eq a => [a] -> (NonNegative Int,a) -> Bool
 prop_addedElem xs (NonNegative pos,val) | pos >= length xs = True
--- Better way to do this? ^^^^^^^^^^
 prop_addedElem xs (NonNegative pos,val) = ((xs !!= (pos,val)) !! pos) == val
 
 prop_correctSize :: [a] -> (NonNegative Int, a) -> Bool
 prop_correctSize xs (NonNegative pos,val) | pos >= length xs = True
--- Better way to do this? ^^^^^^^^^^
 prop_correctSize xs (NonNegative pos,val) =
                              length xs == length (xs !!= (pos,val))
 
@@ -183,7 +165,7 @@ instance Arbitrary ValidPos where
 
 data ValidValue = ValidValue (Maybe Int)
     deriving ( Show, Eq )
--- Really needed, might be able to just use Cell somehow?
+
 instance Arbitrary ValidValue where
      arbitrary =
        do  a <- cell
@@ -219,7 +201,7 @@ solve' sud (cand:cands) | isSolved newSud       = Just newSud
            where blanks'   = blanks sud
                  newSud    = update sud (head blanks') cand
                  cCands    = [Just n | n <- candidates newSud (blanks' !! 1)]
-                 result    = solve' newSud cCands `debug` makeStringSudoku newSud
+                 result    = solve' newSud cCands
 ---------------------------------------------------------------------------
 -- Part F2
 readAndSolve :: FilePath -> IO ()

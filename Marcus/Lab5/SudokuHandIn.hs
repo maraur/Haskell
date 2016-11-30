@@ -183,6 +183,12 @@ squareRegion :: Int -> Int
 squareRegion x | x `elem` [0..2] = 0
                | x `elem` [3..5] = 1
                | x `elem` [6..8] = 2
+
+prop_candidates :: Sudoku -> ValidPos -> Bool
+prop_candidates sud (ValidPos pos) | pos `elem` blanks sud = True
+prop_candidates sud (ValidPos pos) = and [isSudoku sud'  | sud' <- updatedSudokus]
+        where cand           = candidates sud pos
+              updatedSudokus = [update sud pos (Just x)| x <-cand]
 ---------------------------------------------------------------------------
 -- Part F1
 solve :: Sudoku -> Maybe Sudoku
@@ -224,4 +230,4 @@ isSolutionOf solved unSolved = and [getPos p solved == getPos p unSolved | p <- 
 prop_SolveSound :: Sudoku -> Property
 prop_SolveSound sud = isOkay sud ==> isSolutionOf (fromJust (solve sud)) sud
 
-fewerChecks prop = quickCheckWith stdArgs{ maxSuccess = 30 } prop
+fewerChecks prop = verboseCheckWith stdArgs{ maxSuccess = 30 } prop

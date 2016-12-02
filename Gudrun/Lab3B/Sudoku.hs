@@ -139,7 +139,7 @@ isOkay sud = all isOkayBlock (rows sud)
 type Pos = (Int,Int)
 
 blanks :: Sudoku -> [Pos]
-blanks sud = [(x,y) | y <- [0..8], x <- [0..8], isNothing(getPos (x,y) sud)]
+blanks sud = [(x,y) | x <- [0..8], y <- [0..8], isNothing(getPos (x,y) sud)]
 
 getPos :: Pos -> Sudoku -> Maybe Int
 getPos (x,y) sud = ((rows sud)!!y)!!x
@@ -235,7 +235,7 @@ solve' sud = if noCandidates
                       c:candidates' = candidates sud pos
                       noCandidates = null (c:candidates')
 
-solve'' :: Sudoku -> Pos -> [Int] -> Maybe Sudoku
+solve'' :: Sudoku ->
 solve'' sud pos [] = Nothing
 solve'' sud pos (c:candidates') | solve' (update sud pos (Just c)) == Nothing = solve'' sud pos candidates'
 solve'' sud pos (c:candidates') = solve' (update sud pos (Just c))
@@ -249,4 +249,4 @@ isSolutionOf :: Sudoku -> Sudoku -> Bool
 isSolutionOf sud1 sud2 = isSolved sud1 && isOkay sud1 && sameStartingValues
   where  sameStartingValues = and [getPos(x,y) sud1 == getPos (x,y) sud2 | x<-[0..8], y<-[0..8],isJust (getPos (x,y) sud2)]
 
---prop_SolveSound :: Sudoku -> Property
+prop_SolveSound :: Sudoku -> Property

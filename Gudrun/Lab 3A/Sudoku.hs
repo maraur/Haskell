@@ -78,7 +78,7 @@ rNumeric = do n <- choose(1,9)
               return (Just n)
 
 rNothing :: Gen (Maybe Int)
-rNothing = return (Nothing)
+rNothing = return Nothing
 
 -- an instance for generating Arbitrary Sudokus
 instance Arbitrary Sudoku where

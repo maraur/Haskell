@@ -52,6 +52,11 @@ makeShuffledCoordinates coords g n = take n shuffled
 makeCoordinates :: Int -> Int -> [Pos]
 makeCoordinates x y = [(x,y) | y <- [0..(y-1)], x <- [0..(x-1)]]
 
+calculateField :: MineField -> MineField
 calculateField = undefined
 
+calculateTile :: MineField -> Pos -> MineField
+calculateTile = undefined
+
+getPos :: Pos -> MineField -> Tile
 getPos = undefined

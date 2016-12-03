@@ -13,7 +13,7 @@ import Debug.Trace
 debug = flip trace
   --REMOVE!!!!
 
-data Tile = Bomb | Numeric Integer
+data Tile = Bomb | Numeric Int
               deriving (Show, Eq)
 
 data MineField = MineField {rows :: [[Tile]]}
@@ -60,3 +60,15 @@ calculateTile = undefined
 
 getPos :: Pos -> MineField -> Tile
 getPos = undefined
+
+--------------------------------------------------------------------------------
+--Just to see the field properly for debugging
+printMinefield :: MineField -> IO ()
+printMinefield field = mapM_ (putStrLn . makeLine) (rows field)
+
+makeLine :: [Tile] -> String
+makeLine = map makeChar
+
+makeChar :: Tile -> Char
+makeChar Bomb  = 'B'
+makeChar (Numeric n) = intToDigit n

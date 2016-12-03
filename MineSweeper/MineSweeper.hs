@@ -71,8 +71,10 @@ makeBombField numOfBombs field g = makeBombField' bombs field
 
 
 makeBombField' :: [Pos] -> MineField -> MineField
-makeBombField' [] field       = field
-makeBombField' (x:pos) field  = makeBombField' pos (updateTile x Bomb field)
+--makeBombField' [] field       = field
+--makeBombField' (x:pos) field  = makeBombField' pos (updateTile x Bomb field)
+makeBombField' pos field = foldl (\ field x -> updateTile x Bomb field) field pos
+-- ^ according to hlint
 -------------------------------------------------------------------------------
 makeShuffledCoordinates :: [Pos] -> StdGen -> Int -> [Pos]
 makeShuffledCoordinates coords g n = take n shuffled
@@ -98,6 +100,10 @@ calculateField' (x:pos) field = if getPos x field == Bomb
                                     calculateField' pos (updateTile x value field)
         where value = calculateTile field x
 
+--TODO
+prop_calculateField :: MineField -> Bool
+prop_calculateField = undefined
+
 calculateTile :: MineField -> Pos -> Tile
 calculateTile field pos = Numeric value
     where value = length (square field pos)
@@ -115,7 +121,7 @@ isClose :: Int -> Int -> Bool
 isClose x y = x `elem` [(y-1)..(y+1)]
 
 getPos :: Pos -> MineField -> Tile
-getPos (posX,posY) field = (rows field)!!posY!!posX
+getPos (posX,posY) field = rows field!!posY!!posX
 
 --------------------------------------------------------------------------------
 --Just to see the field properly for debugging

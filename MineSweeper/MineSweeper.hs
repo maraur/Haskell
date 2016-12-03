@@ -48,10 +48,15 @@ updateTile (x,y) val field = MineField(x' ++ [xRow !!= (x,val)] ++ x'')
             xRow = concat (take 1 (drop y xs))
             x''  = drop (y+1) xs
 
--- TODO this needs to be recursive
---makeBombField :: Int -> MineField -> StdGen -> MineField
---makeBombField b old g = (\x -> updateTile x bomb old) bombs
---          where bombs = makeShuffledCoordinates old g b
+makeBombField :: Int -> MineField -> StdGen -> MineField
+makeBombField numOfBombs field g = makeBombField' bombs field
+    where bombs = makeShuffledCoordinates (makeCoordinates x y) g numOfBombs
+          x = length (rows field)
+          y = length (transpose (rows field))
+
+makeBombField' :: [Pos] -> MineField -> MineField
+makeBombField' [] field = field
+makeBombField' (x:pos) field = makeBombField' pos (updateTile x Bomb field)
 -------------------------------------------------------------------------------
 makeShuffledCoordinates :: [Pos] -> StdGen -> Int -> [Pos]
 makeShuffledCoordinates coords g n = take n shuffled
@@ -73,8 +78,8 @@ getPos (posX,posY) field = (rows field)!!posY!!posX
 
 --------------------------------------------------------------------------------
 --Just to see the field properly for debugging
-printMinefield :: MineField -> IO ()
-printMinefield field = mapM_ (putStrLn . makeLine) (rows field)
+printMineField :: MineField -> IO ()
+printMineField field = mapM_ (putStrLn . makeLine) (rows field)
 
 makeLine :: [Tile] -> String
 makeLine = map makeChar

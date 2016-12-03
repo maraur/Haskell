@@ -27,22 +27,32 @@ testFunction x y b = do g <- newStdGen
 makeEmptyField :: Int -> Int -> MineField
 makeEmptyField x y = MineField {rows = replicate y (replicate x (Numeric 0))}
 
+-------------------------------------------------------------------------------
+
+(!!=) :: [a] -> (Int,a) -> [a]
+(!!=) xs (pos,val) = take pos xs ++ [val] ++ drop (pos+1) xs
+
+prop_addedElem :: Eq a => [a] -> (NonNegative Int,a) -> Bool
+prop_addedElem xs (NonNegative pos,val) | pos >= length xs = True
+prop_addedElem xs (NonNegative pos,val) = ((xs !!= (pos,val)) !! pos) == val
+
+prop_correctSize :: [a] -> (NonNegative Int, a) -> Bool
+prop_correctSize xs (NonNegative pos,val) | pos >= length xs = True
+prop_correctSize xs (NonNegative pos,val) =
+                             length xs == length (xs !!= (pos,val))
+
+updateTile :: Pos -> Tile -> MineField -> MineField
+updateTile (x,y) val field = MineField(x' ++ [xRow !!= (x,val)] ++ x'')
+      where xs  = rows field
+            x'   = take y xs
+            xRow = concat (take 1 (drop y xs))
+            x''  = drop (y+1) xs
 
 -- TODO this needs to be recursive
 --makeBombField :: Int -> MineField -> StdGen -> MineField
 --makeBombField b old g = (\x -> updateTile x bomb old) bombs
 --          where bombs = makeShuffledCoordinates old g b
-
-updateTile :: Pos -> Tile -> MineField -> MineField
-updateTile (x,y) val field = MineField(x' ++ [xRow !!= (x,val)] ++ x'')
-              where xs  = rows field
-                    x'   = take y xs
-                    xRow = concat (take 1 (drop y xs))
-                    x''  = drop (y+1) xs
-
-(!!=) :: [a] -> (Int,a) -> [a]
-(!!=) xs (pos,val) = take pos xs ++ [val] ++ drop (pos+1) xs
-
+-------------------------------------------------------------------------------
 makeShuffledCoordinates :: [Pos] -> StdGen -> Int -> [Pos]
 makeShuffledCoordinates coords g n = take n shuffled
                   where len = length coords
@@ -59,7 +69,7 @@ calculateTile :: MineField -> Pos -> MineField
 calculateTile = undefined
 
 getPos :: Pos -> MineField -> Tile
-getPos = undefined
+getPos (posX,posY) field = (rows field)!!posY!!posX
 
 --------------------------------------------------------------------------------
 --Just to see the field properly for debugging

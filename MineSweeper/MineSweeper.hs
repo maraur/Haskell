@@ -24,6 +24,23 @@ type Pos = (Int,Int)
 testFunction x y b = do g <- newStdGen
                  return makeBombField b (makeEmptyField x y) g
 -}
+example :: MineField
+example =
+      MineField
+        [ [b  ,n 1,n 0,n 2,b  ,b  ,n 1,n 0,n 0]
+        , [n 1,n 1,n 0,n 2,b  ,n 3,n 1,n 0,n 0]
+        , [n 1,n 1,n 0,n 1,n 1,n 1,n 0,n 0,n 0]
+        , [b  ,n 1,n 0,n 1,n 2,n 2,n 1,n 0,n 0]
+        , [n 1,n 1,n 0,n 1,b  ,b  ,n 1,n 0,n 0]
+        , [n 0,n 0,n 0,n 1,n 2,n 2,n 2,n 1,n 1]
+        , [n 0,n 0,n 0,n 0,n 0,n 0,n 1,b  ,n 2]
+        , [n 1,n 1,n 1,n 0,n 0,n 0,n 1,n 2,b  ]
+        , [n 1,b  ,n 1,n 0,n 0,n 0,n 0,n 1,n 1]
+        ]
+    where
+      n = Numeric
+      b = Bomb
+
 makeEmptyField :: Int -> Int -> MineField
 makeEmptyField x y = MineField {rows = replicate y (replicate x (Numeric 0))}
 
@@ -50,9 +67,8 @@ updateTile (x,y) val field = MineField(x' ++ [xRow !!= (x,val)] ++ x'')
 
 makeBombField :: Int -> MineField -> StdGen -> MineField
 makeBombField numOfBombs field g = makeBombField' bombs field
-    where bombs = makeShuffledCoordinates (makeCoordinates x y) g numOfBombs
-          x = length (rows field)
-          y = length (transpose (rows field))
+    where bombs = makeShuffledCoordinates (makeCoordinates field) g numOfBombs
+
 
 makeBombField' :: [Pos] -> MineField -> MineField
 makeBombField' [] field = field
@@ -64,14 +80,29 @@ makeShuffledCoordinates coords g n = take n shuffled
                         shuffled = shuffle' coords len g
 
 
-makeCoordinates :: Int -> Int -> [Pos]
-makeCoordinates x y = [(x,y) | y <- [0..(y-1)], x <- [0..(x-1)]]
+makeCoordinates :: MineField -> [Pos]
+makeCoordinates field = [(x,y) | y <- [0..(y'-1)], x <- [0..(x'-1)]]
+    where x' = length (rows field)
+          y' = length (transpose (rows field))
 
 calculateField :: MineField -> MineField
 calculateField = undefined
 
-calculateTile :: MineField -> Pos -> MineField
-calculateTile = undefined
+--calculateTile :: MineField -> Pos -> MineField
+calculateTile field pos = updateTile pos (Numeric value) field
+    where value = length (square field pos)
+
+square :: MineField -> Pos -> [Tile]
+square field pos = [getPos x field| x <- positions, getPos x field ==Bomb]
+    where positions = square' field pos
+
+square' :: MineField -> Pos -> [Pos]
+square' field  (x,y) =
+    [(a,b) | (a,b) <- fieldCoords, isClose x a, isClose y b, (x,y) /= (a,b) ]
+      where fieldCoords = makeCoordinates field
+
+isClose :: Int -> Int -> Bool
+isClose x y = x `elem` [(y-1)..(y+1)]
 
 getPos :: Pos -> MineField -> Tile
 getPos (posX,posY) field = (rows field)!!posY!!posX

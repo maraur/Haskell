@@ -71,12 +71,12 @@ makeBombField numOfBombs field g = makeBombField' bombs field
 
 
 makeBombField' :: [Pos] -> MineField -> MineField
-makeBombField' [] field = field
-makeBombField' (x:pos) field = makeBombField' pos (updateTile x Bomb field)
+makeBombField' [] field       = field
+makeBombField' (x:pos) field  = makeBombField' pos (updateTile x Bomb field)
 -------------------------------------------------------------------------------
 makeShuffledCoordinates :: [Pos] -> StdGen -> Int -> [Pos]
 makeShuffledCoordinates coords g n = take n shuffled
-                  where len = length coords
+                  where len      = length coords
                         shuffled = shuffle' coords len g
 
 
@@ -86,10 +86,20 @@ makeCoordinates field = [(x,y) | y <- [0..(y'-1)], x <- [0..(x'-1)]]
           y' = length (transpose (rows field))
 
 calculateField :: MineField -> MineField
-calculateField = undefined
+calculateField field = calculateField' coords field
+    where coords = makeCoordinates field
 
---calculateTile :: MineField -> Pos -> MineField
-calculateTile field pos = updateTile pos (Numeric value) field
+calculateField' :: [Pos] -> MineField -> MineField
+calculateField' [] field = field
+calculateField' (x:pos) field = if getPos x field == Bomb
+                                  then
+                                    calculateField' pos field
+                                  else
+                                    calculateField' pos (updateTile x value field)
+        where value = calculateTile field x
+
+calculateTile :: MineField -> Pos -> Tile
+calculateTile field pos = Numeric value
     where value = length (square field pos)
 
 square :: MineField -> Pos -> [Tile]

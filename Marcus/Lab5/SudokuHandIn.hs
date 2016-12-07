@@ -13,12 +13,12 @@ data Sudoku = Sudoku { rows :: [[Maybe Int]] }
 
 -- allBlankSudoku is a sudoku with just blanks
 allBlankSudoku :: Sudoku
-allBlankSudoku = Sudoku[[Nothing | x <- [1..9]] | y <- [1..9]]
+allBlankSudoku = Sudoku[[Nothing | y <- [1..9]] | x <- [1..9]]
 
 -- isSudoku sud checks if sud is really a valid representation of a sudoku
 -- puzzle
 isSudoku :: Sudoku -> Bool
-isSudoku sud = isValidLength && isValidRowLength
+isSudoku sud = isValidLength && isValidRowLength && isValidNumber
         where rowsSud          = rows sud
               isValidLength    = length rowsSud == 9
               isValidRowLength = all (\x -> length x == 9) rowsSud
@@ -100,7 +100,7 @@ blocks sud = sudokuRows ++ transpose sudokuRows ++ makeBlocks sud
        where sudokuRows = rows sud
 
 makeBlocks :: Sudoku -> [Block]
-makeBlocks sud = [square (x,y) sud | x <- [0..2], y <- [0..2]]
+makeBlocks sud = [square (x,y) sud | y <- [0..2], x <- [0..2]]
 
 square :: (Int, Int) -> Sudoku -> Block
 square (x,y) sud = concat
@@ -129,7 +129,6 @@ prop_areBlanks :: Sudoku -> Bool
 prop_areBlanks sud = and [isNothing (getPos x sud) | x <- blanks sud]
 
 -- Part E2
-
 (!!=) :: [a] -> (Int,a) -> [a]
 (!!=) xs (pos,val) = take pos xs ++ [val] ++ drop (pos+1) xs
 
@@ -142,17 +141,23 @@ prop_correctSize xs (NonNegative pos,val) | pos >= length xs = True
 prop_correctSize xs (NonNegative pos,val) =
                              length xs == length (xs !!= (pos,val))
 
+prop_correctList :: Eq a => [a] -> (NonNegative Int, a) -> Bool
+prop_correctList xs (NonNegative pos,val) | pos >= length xs = True
+prop_correctList xs (NonNegative pos,val) = takePart && dropPart
+                    where xs'      = xs !!= (pos,val)
+                          takePart = (take pos xs') == (take pos xs)
+                          dropPart = (drop (pos+1) xs') == (drop (pos+1) xs)
+
 -- Part E3
 update :: Sudoku -> Pos -> Maybe Int -> Sudoku
-update sud (x,y) val = Sudoku(x' ++ [xRow !!= (x,val)] ++ x'')
-              where xs  = rows sud
-                    x'   = take y xs
-                    xRow = concat (take 1 (drop y xs))
-                    x''  = drop (y+1) xs
+update sud (posA, posB) newValue = Sudoku (rows sud !!= (posB, newRow))
+            where oldRow = rows sud!!posB
+                  newRow = oldRow !!= (posA, newValue)
 
 prop_update :: Sudoku -> ValidPos -> ValidValue -> Bool
 prop_update sud (ValidPos pos) (ValidValue val)
                                = getPos pos (update sud pos val) == val
+            where posTest = getPos pos (update sud pos val) == val
 
 data ValidPos = ValidPos Pos
     deriving ( Show, Eq )
@@ -174,10 +179,12 @@ instance Arbitrary ValidValue where
 -- Part E4
 candidates :: Sudoku -> Pos -> [Int]
 candidates sud (x,y) = [x | x <- [1..9], x `notElem` existing]
-      where rowX       = rows sud !! y
-            rowY       = transpose (rows sud) !! x
-            candSquare = square (squareRegion x, squareRegion y) sud
-            existing   = catMaybes (nub (rowX ++ rowY ++ candSquare))
+      where sudBlocks  = blocks sud
+            rows       = sudBlocks !! y
+            columns    = sudBlocks !! (9+x)
+            candSquare = sudBlocks !! (18 + squareReg - 1)
+            existing   = catMaybes (nub (rows ++ columns ++ candSquare))
+            squareReg  = ((squareRegion x) + 1) + ((squareRegion y) * 3)
 
 squareRegion :: Int -> Int
 squareRegion x | x `elem` [0..2] = 0

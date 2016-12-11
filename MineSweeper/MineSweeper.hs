@@ -22,6 +22,9 @@ data MineField = MineField {rows :: [[Tile]]}
 -- The Bool states whether the Tile is revealed or not
 type GuiTile = (Bool, Tile)
 
+data Shown = Flag | Showing Bool
+               deriving (Show, Eq)
+
 data GuiMineField = GuiMineField {rows' :: [[GuiTile]]}
               deriving (Show, Eq)
 
@@ -160,11 +163,19 @@ makeChar :: Tile -> Char
 makeChar Bomb  = 'B'
 makeChar (Numeric n) = intToDigit n
 --------------------------------------------------------------------------------
-isGameOver :: MineField -> Bool
-isGameOver field = or (map (Bomb `elem`) fieldRows)
-      where fieldRows = rows field
+-- Functions for checking if game is over or won
+isGameOver :: GuiMineField -> Bool
+isGameOver field = or (map ((True,Bomb) `elem`) fieldRows)
+      where fieldRows = rows' field
+
+--TODO write this one
+--This function should check if all non-bomb tiles are revealed
+isGameWon :: GuiMineField -> Bool
+isGameWon = undefined
 --------------------------------------------------------------------------------
--- Functions for revealing tiles
+-- Functions for revealing and flaging tiles
+--revealTileIO :: GuiMineField -> IO Pos -> GuiMineField
+--revealTileIO
 
 -- Recursively reveals tiles using the Flood Fill algorithm
 revealTile :: GuiMineField -> Pos -> GuiMineField
@@ -179,15 +190,18 @@ revealTile guiLayer (x,y)
            gridWest     = revealTile gridEast (x-1,y)
            gridSouth    = revealTile gridWest (x,y+1)
            gridNorth    = revealTile gridSouth (x,y-1)
-
-
+{-
+flagTile :: GuiMineField -> Pos -> GuiMineField
+flagTile guiLayer (x,y) | not (inBounds (x,y) guiLayer) || shown = guiLayer
+                        | otherwise = updateGuiTile pos (True, val) field
+-}
 showGuiTile :: GuiMineField -> Pos -> GuiMineField
 showGuiTile field pos | shown     = field
                       | otherwise = updateGuiTile pos (True, val) field
    where (shown,val) = getGuiTile field pos
 
-   updateGuiTile :: Pos -> GuiTile -> GuiMineField -> GuiMineField
-   updateGuiTile (x,y) val field = GuiMineField(x' ++ [xRow !!= (x,val)] ++ x'')
+updateGuiTile :: Pos -> GuiTile -> GuiMineField -> GuiMineField
+updateGuiTile (x,y) val field = GuiMineField(x' ++ [xRow !!= (x,val)] ++ x'')
        where xs  = rows' field
              x'   = take y xs
              xRow = concat (take 1 (drop y xs))
@@ -202,7 +216,6 @@ inBounds (x,y) field = x >= 0 && y >= 0 && x <= xLen && y <= yLen
      where fieldRows = rows' field
            yLen = length (fieldRows) -1
            xLen = length (head fieldRows) -1
-
 ---------------------------------------------------------------------------------
 --Printing stuff for GuiMineField
 printGuiField :: GuiMineField -> IO ()

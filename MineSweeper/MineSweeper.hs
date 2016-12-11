@@ -22,7 +22,9 @@ data MineField = MineField {rows :: [[Tile]]}
 -- The Bool states whether the Tile is revealed or not
 type GuiTile = (Bool, Tile)
 
-data Shown = Flag | Showing Bool
+-- type GuiTile = (Vis, Tile)
+
+data Vis = Flag | Visible | Nonvisible
                deriving (Show, Eq)
 
 data GuiMineField = GuiMineField {rows' :: [[GuiTile]]}

@@ -17,7 +17,13 @@ data Tile = Bomb | Numeric Int
               deriving (Show, Eq)
 
 data MineField = MineField {rows :: [[Tile]]}
-              deriving ( Show, Eq )
+              deriving (Show, Eq)
+
+--Bool saying whether the Tile is revealed or not
+type GuiTile = (Bool, Tile)
+
+data GuiMineField = GuiMineField {rows' :: [[GuiTile]]}
+              deriving (Show, Eq)
 
 type Pos = (Int,Int)
 {-
@@ -44,6 +50,18 @@ example =
 makeEmptyField :: Int -> Int -> MineField
 makeEmptyField x y = MineField {rows = replicate y (replicate x (Numeric 0))}
 
+--Shouldn't be used!
+makeNewGuiField :: Int -> Int -> GuiMineField
+makeNewGuiField x y = GuiMineField {rows' = replicate y (replicate x (False, Numeric 0))}
+
+makeGuiField :: MineField -> GuiMineField
+makeGuiField field = GuiMineField(map makeGuiLine (rows field))
+
+makeGuiLine :: [Tile] -> [GuiTile]
+makeGuiLine = map makeGuiTile
+
+makeGuiTile :: Tile -> GuiTile
+makeGuiTile tile = (False, tile)
 -------------------------------------------------------------------------------
 
 (!!=) :: [a] -> (Int,a) -> [a]
@@ -145,40 +163,76 @@ isGameOver :: MineField -> Bool
 isGameOver field = or (map (Bomb `elem`) fieldRows)
       where fieldRows = rows field
 
+
 -- Recursively reveals tiles using the Flood Fill algorithm
-revealTile :: MineField -> MineField -> Pos -> MineField
-revealTile guiLayer bombLayer (x,y)
-                | not (inBounds (x,y) bombLayer) = guiLayer `debug` "bug"
-                | otherwise = guiLayer `debug` "yaay"
-                {-
-                | otherwise      = if tile /= (Numeric 0)
-                                       then newGuiLayer `debug` (stringifyField newGuiLayer)
-                                       else gridNorth `debug` (stringifyField gridNorth) -}
-     where tile        = getPos (x,y) bombLayer
-           newGuiLayer = updateTile (x,y) tile guiLayer
-           gridEast    = revealTile newGuiLayer bombLayer (x+1,y)
-           gridWest    = revealTile gridEast bombLayer (x-1,y)
-           gridSouth   = revealTile gridWest bombLayer (x,y+1)
-           gridNorth   = revealTile gridSouth bombLayer (x,y-1)
+revealTile :: GuiMineField -> Pos -> GuiMineField
+revealTile guiLayer (x,y)
+                | not (inBounds (x,y) guiLayer) || shown = guiLayer `debug` "bug"
+                | otherwise = if tile /= (Numeric 0)
+                                  then newGuiLayer `debug` "then"
+                                  else gridNorth `debug` stringifyField gridNorth
+     where (shown,tile) = getGuiTile guiLayer (x,y)
+           newGuiLayer  = updateGuiTile (x,y) (True,tile) guiLayer
+           gridEast     = revealTile newGuiLayer(x+1,y)
+           gridWest     = revealTile gridEast (x-1,y)
+           gridSouth    = revealTile gridWest (x,y+1)
+           gridNorth    = revealTile gridSouth (x,y-1)
+
+
+showGuiTile :: GuiMineField -> Pos -> GuiMineField
+showGuiTile field pos | shown     = field
+                      | otherwise = updateGuiTile pos (True, val) field
+   where (shown,val) = getGuiTile field pos
+
+getGuiTile :: GuiMineField -> Pos -> GuiTile
+getGuiTile field (posX,posY) = rows' field !! posY !! posX
+
+updateGuiTile :: Pos -> GuiTile -> GuiMineField -> GuiMineField
+updateGuiTile (x,y) val field = GuiMineField(x' ++ [xRow !!= (x,val)] ++ x'')
+    where xs  = rows' field
+          x'   = take y xs
+          xRow = concat (take 1 (drop y xs))
+          x''  = drop (y+1) xs
 
 -- checks if a position is inside the MineField
-inBounds :: Pos -> MineField -> Bool
+inBounds :: Pos -> GuiMineField -> Bool
 inBounds (x,y) field = x >= 0 && y >= 0 && x <= xLen && y <= yLen
-     where fieldRows = rows field
+     where fieldRows = rows' field
            yLen = length (fieldRows) -1
            xLen = length (head fieldRows) -1
-{-
- g <- newStdGen
-let empty = makeEmptyField 10 10
-let bombField = makeField 10 10 10 g
- printMineField bombField
-let newField = revealTile empty bombField (0,2)
- printMineField newField
- -}
+
+
+testFunction = do
+              g <- newStdGen
+              let bombField = makeField 10 10 10 g
+              let guiField = makeGuiField bombField
+              printMineField bombField
+              putStrLn "---------------------------"
+              printGuiField guiField
+              --x <- getChar
+              --putStrLn [x]
+            --  y <- getChar
+              --putStrLn [y]
+              let newField = revealTile guiField (0, 0)
+              putStrLn "---------------------------"
+              printGuiField newField
+              return 0
+
+printGuiField :: GuiMineField -> IO ()
+printGuiField field = mapM_ (putStrLn . makeLine') (rows' field)
 
 --TODO REMOVE!!!! ONlY FOR DEBUG!
-stringifyField :: MineField -> String
-stringifyField field = concatMap makeLineWithBreak (rows field)
+stringifyField :: GuiMineField -> String
+stringifyField field = concatMap makeLineWithBreak (rows' field)
 
-makeLineWithBreak :: [Tile] -> String
-makeLineWithBreak list = makeLine list ++ "\n"
+makeLineWithBreak :: [GuiTile] -> String
+makeLineWithBreak list = makeLine' list ++ "\n"
+
+makeLine' :: [GuiTile] -> String
+makeLine' = map makeChar'
+
+makeChar' :: GuiTile -> Char
+makeChar' (False, _)  = '-'
+makeChar' (_, Bomb)  = '*'
+makeChar' (_, Numeric n) = intToDigit n
+-----------------------------------------

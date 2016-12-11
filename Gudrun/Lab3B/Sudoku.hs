@@ -1,102 +1,83 @@
 module Sudoku where
 
 import Test.QuickCheck
-import Data.Char
-import Data.Maybe
+import Data.Char (ord, chr, isDigit, digitToInt, intToDigit)
+import Data.Ord
+import System.Random
 import Data.List
+import Data.Maybe
 -------------------------------------------------------------------------
 
 data Sudoku = Sudoku { rows :: [[Maybe Int]] }
  deriving ( Show, Eq )
 
-
-example1 :: Sudoku
-example1 =
-      Sudoku
-        [ [j 1,n,j 7,j 2,j 3,j 8,j 5,n,j 9]
-        , [j 2,j 5,n,j 1,j 6,j 9,j 3,j 4,j 7]
-        , [j 3,j 6,j 9,j 4,j 5,j 7,j 1,j 2,j 8]
-        , [n,n,n,n,j 8,n,j 6,j 9,j 5]
-        , [j 5,j 8,j 2,j 6,j 9,j 1,n,n,j 3]
-        , [j 6,n,j 3,j 5,j 7,j 4,j 2,j 8,j 1]
-        , [j 7,j 1,j 4,j 8,j 2,j 3,j 9,j 5,j 6]
-        , [j 8,j 2,j 5,n,n,j 6,j 7,j 3,j 4]
-        , [j 9,j 3,j 6,j 7,j 4,j 5,j 8,j 1,n]
-        ]
-    where
-      n = Nothing
-      j = Just
-
-example :: Sudoku
-example =
-          Sudoku
-            [ [j 3,j 6,n  ,n  ,j 7,j 1,j 2,n  ,n  ]
-            , [n  ,j 5,n  ,n  ,n  ,n  ,j 1,j 8,n  ]
-            , [n  ,n  ,j 9,j 2,n  ,j 4,j 7,n  ,n  ]
-            , [n  ,n  ,n  ,n  ,j 1,j 3,n  ,j 2,j 8]
-            , [j 4,n  ,n  ,j 5,n  ,j 2,n  ,n  ,j 9]
-            , [j 2,j 7,n  ,j 4,j 6,n  ,n  ,n  ,n  ]
-            , [n  ,n  ,j 5,j 3,n  ,j 8,j 9,n  ,n  ]
-            , [n  ,j 8,j 3,n  ,n  ,n  ,n  ,j 6,n  ]
-            , [n  ,n  ,j 7,j 6,j 9,n  ,n  ,j 4,j 3]
-            ]
-        where
-          n = Nothing
-          j = Just
-
+-- allBlankSudoku is a sudoku with just blanks
 allBlankSudoku :: Sudoku
-allBlankSudoku = Sudoku {rows = replicate 9 (replicate 9 Nothing)}
+allBlankSudoku = Sudoku[[Nothing | y <- [1..9]] | x <- [1..9]]
 
--------------------------------------------------------------------------
-
+-- isSudoku sud checks if sud is really a valid representation of a sudoku
+-- puzzle
 isSudoku :: Sudoku -> Bool
-isSudoku sud = isValidRows && isValidColumns && isValidNumbers
-  where x = rows sud
-        isValidRows     = length x == 9
-        isValidColumns  = and [length x' == 9 | x' <- x]
-        isValidNumbers  = and [and [x'' `elem` [1..9] | Just x'' <- x' ] | x' <- x]
+isSudoku sud = isValidLength && isValidRowLength && isValidNumber
+        where rowsSud          = rows sud
+              isValidLength    = length rowsSud == 9
+              isValidRowLength = all (\x -> length x == 9) rowsSud
+              isValidNumber    = and [ and [x `elem` validNumbers | x <- x']
+                                                | x' <- rowsSud]
+              validNumbers     = Nothing : [Just n | n <- [1..9]]
 
--------------------------------------------------------------------------
-
+-- isSolved sud checks if sud is already solved, i.e. there are no blanks
 isSolved :: Sudoku -> Bool
-isSolved sud = and [isJust x | xs <- rows sud, x <- xs ]
+isSolved sud = and [isJust x | xs <- rows sud, x <- xs]
 
 -------------------------------------------------------------------------
 
+-- printSudoku sud prints a representation of the sudoku sud on the screen
 printSudoku :: Sudoku -> IO ()
-printSudoku sud = mapM_ (putStrLn . maybeToChar) (rows sud)
+printSudoku sud = mapM_ (putStrLn . makeLine) (rows sud)
+--Remove
+makeStringSudoku :: Sudoku -> String
+makeStringSudoku sud = concatMap makeLineWithBreak (rows sud)
 
-maybeToChar:: [Maybe Int] -> String
-maybeToChar = map (maybe '.' intToDigit)
+makeLineWithBreak :: [Maybe Int] -> String
+makeLineWithBreak list = makeLine list ++ "\n"
+--Remove
+makeLine :: [Maybe Int] -> String
+makeLine = map makeChar
 
+makeChar :: Maybe Int -> Char
+makeChar Nothing  = '.'
+makeChar (Just n) = intToDigit n
+
+-- readSudoku file reads from the file, and either delivers it, or stops
+-- if the file did not contain a sudoku
 readSudoku :: FilePath -> IO Sudoku
-readSudoku path = do  s <- readFile path
-                      let l = lines s
-                      let sud = Sudoku (map stringToMaybe l)
-                      if not (isSudoku sud)
-                        then error "Not sudoku"
-                        else return sud
+readSudoku file = do s <- readFile file
+                     let l = lines s
+                     let sud = Sudoku(map makeSudokuLine l)
+                     if not(isSudoku sud)
+                       then error "Program error: Not a Sudoku!"
+                       else return sud
 
-stringToMaybe :: String -> [Maybe Int]
-stringToMaybe = map charToMaybe
+makeSudokuLine :: String -> [Maybe Int]
+makeSudokuLine = map makeSudokuChar
 
-charToMaybe :: Char -> Maybe Int
-charToMaybe '.' = Nothing
-charToMaybe n | isDigit n = Just (digitToInt n)
-charToMaybe _ = error "Not sudoku"
-
+makeSudokuChar :: Char -> Maybe Int
+makeSudokuChar '.'           = Nothing
+makeSudokuChar n | isDigit n = Just (digitToInt n)
+makeSudokuChar _             = error "Program error: Not a Sudoku!"
 -------------------------------------------------------------------------
 
 -- cell generates an arbitrary cell in a Sudoku
 cell :: Gen (Maybe Int)
-cell = frequency [(9,rNothing), (1,rNumeric)]
+cell = frequency [(9, nothingCell),(1,numberCell)]
 
-rNumeric :: Gen (Maybe Int)
-rNumeric = do n <- choose(1,9)
-              return (Just n)
+nothingCell :: Gen (Maybe Int)
+nothingCell = return Nothing
 
-rNothing :: Gen (Maybe Int)
-rNothing = return Nothing
+numberCell :: Gen (Maybe Int)
+numberCell = do n <- choose(1,9)
+                return (Just n)
 
 -- an instance for generating Arbitrary Sudokus
 instance Arbitrary Sudoku where
@@ -106,25 +87,23 @@ instance Arbitrary Sudoku where
 
 prop_Sudoku :: Sudoku -> Bool
 prop_Sudoku = isSudoku
-
 -------------------------------------------------------------------------
-
 type Block = [Maybe Int]
 
 isOkayBlock :: Block -> Bool
-isOkayBlock block = length list == length (nub list)
-    where list = catMaybes block
+isOkayBlock block = length xs == length (nub xs)
+                where xs = filter (/= Nothing) block
 
 blocks :: Sudoku -> [Block]
-blocks sud = sudokuRows ++ transpose sudokuRows ++ getBlocks sudokuRows
+blocks sud = sudokuRows ++ transpose sudokuRows ++ makeBlocks sud
        where sudokuRows = rows sud
 
-getBlocks :: [[Maybe Int]] -> [Block]
-getBlocks rows = [square (x,y) rows | x <- [0..2], y <- [0..2]]
+makeBlocks :: Sudoku -> [Block]
+makeBlocks sud = [square (x,y) sud | y <- [0..2], x <- [0..2]]
 
-square :: (Int, Int) -> [[Maybe Int]] -> Block
-square (x,y) rows = concat
-          [take 3 (drop (3*x) row) | row <- take 3 (drop (3*y) rows)]
+square :: (Int, Int) -> Sudoku -> Block
+square (x,y) sud = concat
+          [take 3 (drop (3*x) row) | row <- take 3 (drop (3*y) (rows sud))]
 
 prop_validBlocks :: Sudoku -> Bool
 prop_validBlocks sud = length sudokuBlocks == 27 &&
@@ -132,121 +111,128 @@ prop_validBlocks sud = length sudokuBlocks == 27 &&
                  where sudokuBlocks = blocks sud
 
 isOkay :: Sudoku -> Bool
-isOkay sud = all isOkayBlock (rows sud)
-
--------------------------------------------------------------------------
-
+isOkay sud = and [isOkayBlock block | block <- blocks sud]
+---------------------------------------------------------------------------
+-- Part E
+---------------------------------------------------------------------------
+-- Part E1
 type Pos = (Int,Int)
 
 blanks :: Sudoku -> [Pos]
-blanks sud = [(x,y) | x <- [0..8], y <- [0..8], isNothing(getPos (x,y) sud)]
+blanks sud = [(x,y) | y <- [0..8], x <- [0..8], isNothing(getPos (x,y) sud)]
 
 getPos :: Pos -> Sudoku -> Maybe Int
-getPos (x,y) sud = ((rows sud)!!y)!!x
+getPos (x,y) sud = (rows sud !! y) !! x
 
-prop_blanks:: Sudoku -> Bool
-prop_blanks sud = and [isNothing ((rows sud!!a)!!b) | (a,b)<-blanks sud ]
+prop_areBlanks :: Sudoku -> Bool
+prop_areBlanks sud = and [isNothing (getPos x sud) | x <- blanks sud]
 
--------------------------------------------------------------------------
+-- Part E2
+
 (!!=) :: [a] -> (Int,a) -> [a]
-[] !!= _                  = []
-list !!= (i, _ ) | i<0 || i >= length list = list
-list !!= (i, newElement) = take i list ++ [newElement] ++ drop (i+1) list
+(!!=) xs (pos,val) = take pos xs ++ [val] ++ drop (pos+1) xs
 
--- Checks if new element has actually been updated in the list
-prop_updateList:: Eq a => [a] ->(NonNegative Int, a) -> Bool
-prop_updateList list (NonNegative i, _) | i >= length list = True
-prop_updateList list (NonNegative i, element) = list'!!i == element
-      where list' = list !!= (i,element)
+prop_addedElem :: Eq a => [a] -> (NonNegative Int,a) -> Bool
+prop_addedElem xs (NonNegative pos,val) | pos >= length xs = True
+prop_addedElem xs (NonNegative pos,val) = ((xs !!= (pos,val)) !! pos) == val
 
--- Checks if the sizes of old and new list are the same
-prop_size_updateList:: [a] ->(NonNegative Int, a) -> Bool
-prop_size_updateList list (NonNegative i,newE) = length list == length list'
-          where list' = list !!= (i,newE)
+prop_correctSize :: [a] -> (NonNegative Int, a) -> Bool
+prop_correctSize xs (NonNegative pos,val) | pos >= length xs = True
+prop_correctSize xs (NonNegative pos,val) =
+                             length xs == length (xs !!= (pos,val))
 
+prop_restOfList :: Eq a => [a] -> (NonNegative Int, a) -> Bool
+prop_restOfList xs (NonNegative pos,val) | pos >= length xs = True
+prop_restOfList  x (NonNegative pos, val) = take pos x' == take pos x &&
+                                            drop (pos+1) x' == drop (pos+1) x
+                                        where x' = x !!= (pos, val)
 
--------------------------------------------------------------------------
+-- Part E3
 update :: Sudoku -> Pos -> Maybe Int -> Sudoku
-update sud (posA, posB) newValue =
-      Sudoku (rows sud !!= (posB, newRow))
+update sud (posA, posB) newValue = Sudoku (rows sud !!= (posB, newRow))
             where oldRow = rows sud!!posB
                   newRow = oldRow !!= (posA, newValue)
 
---TODO: newValue has to be Valid
-prop_update :: Sudoku -> ValidIndex -> ValidValue -> Bool
-prop_update sud (ValidIndex (posA,posB)) (ValidValue newValue) =
-                    updatedSud!!posB!!posA == newValue
-    where updatedSud = rows (update sud (posA,posB) newValue)
+prop_update :: Sudoku -> ValidPos -> ValidValue -> Bool
+prop_update sud (ValidPos pos) (ValidValue val)
+                               = getPos pos (update sud pos val) == val
 
-data ValidIndex = ValidIndex Pos
+data ValidPos = ValidPos Pos
     deriving ( Show, Eq )
 
-instance Arbitrary ValidIndex where
+instance Arbitrary ValidPos where
     arbitrary =
       do  a <- choose(0,8)
           b <- choose(0,8)
-          return (ValidIndex (a,b))
+          return (ValidPos (a,b))
 
 data ValidValue = ValidValue (Maybe Int)
-  deriving (Show, Eq)
+    deriving ( Show, Eq )
 
 instance Arbitrary ValidValue where
      arbitrary =
        do  a <- cell
            return (ValidValue a)
 
-validValues = [1..9]
-
+-- Part E4
 candidates :: Sudoku -> Pos -> [Int]
-candidates sud (posA,posB) = remove validValues blocks
-    where block1 = rows sud!!posB
-          block2 = transpose (rows sud)!!posA
-          block3 = square (getIndex posA, getIndex posB) (rows sud)
-          blocks = catMaybes (nub(block1++block2++block3))
+candidates sud (x,y) = [x | x <- [1..9], x `notElem` existing]
+      where sudBlocks  = blocks sud
+            rows       = sudBlocks !! y
+            columns    = sudBlocks !! (9+x)
+            candSquare = sudBlocks !! (18 + squareReg - 1)
+            existing   = catMaybes (nub (rows ++ columns ++ candSquare))
+            squareReg  = ((squareRegion x) + 1) + ((squareRegion y) * 3)
 
---TODO: A better way to do this?
-getIndex ::  Int -> Int
-getIndex x | x `elem` [0..2] = 0
-getIndex x | x `elem` [3..5] = 1
-getIndex x | x `elem` [6..8] = 2
+squareRegion :: Int -> Int
+squareRegion x | x `elem` [0..2] = 0
+               | x `elem` [3..5] = 1
+               | x `elem` [6..8] = 2
 
---Helper function that removes elements from list1 if they are in list2
-remove :: Eq a => [a] -> [a] -> [a]
-remove list1 list2 = [x | x<-list1, x `notElem` list2]
-
-prop_candidates :: Sudoku -> ValidIndex -> Bool
-prop_candidates sud (ValidIndex pos) | pos `elem` blanks sud = True
-prop_candidates sud (ValidIndex pos) = and [isSudoku sud'  | sud' <- updatedSudokus]
-      where cand = candidates sud pos
-            updatedSudokus = [update sud pos (Just x)| x <-cand]
-
--------------------------------------------------------------------------
-
+prop_candidates :: Sudoku -> ValidPos -> Bool
+prop_candidates sud (ValidPos pos) | pos `elem` blanks sud = True
+prop_candidates sud (ValidPos pos) = and [isSudoku sud'  | sud' <- updatedSudokus]
+        where cand           = candidates sud pos
+              updatedSudokus = [update sud pos (Just x)| x <-cand]
+---------------------------------------------------------------------------
+-- Part F1
 solve :: Sudoku -> Maybe Sudoku
-solve sud | not (isOkay sud)  = Nothing
-solve sud                     = solve' sud
+solve sud | isOkay sud = solve' sud []
+          | otherwise  = Nothing
 
-solve' :: Sudoku -> Maybe Sudoku
-solve' sud | isSolved sud = Just sud
-solve' sud = if noCandidates
-              then Nothing
-              else solve'' sud pos (c:candidates')
-                where pos:blanks' = blanks sud
-                      c:candidates' = candidates sud pos
-                      noCandidates = null (c:candidates')
-
-solve'' :: Sudoku ->
-solve'' sud pos [] = Nothing
-solve'' sud pos (c:candidates') | solve' (update sud pos (Just c)) == Nothing = solve'' sud pos candidates'
-solve'' sud pos (c:candidates') = solve' (update sud pos (Just c))
-
+solve' :: Sudoku -> [Maybe Int] -> Maybe Sudoku
+solve' sud _            | isSolved sud         = Just sud
+solve' sud []    = solve' sud [Just n | n <- candidates sud (head (blanks sud))]
+solve' sud (cand:cands) | isSolved newSud       = Just newSud
+                        | null cCands || isNothing result
+                                                = if null cands
+                                                  then Nothing
+                                                  else solve' sud cands
+                        | otherwise             = result
+           where blanks'   = blanks sud
+                 newSud    = update sud (head blanks') cand
+                 cCands    = [Just n | n <- candidates newSud (blanks' !! 1)]
+                 result    = solve' newSud cCands
+---------------------------------------------------------------------------
+-- Part F2
 readAndSolve :: FilePath -> IO ()
-readAndSolve path = do  s <- readSudoku path
-                        let a = fromJust (solve s)
-                        printSudoku a
+readAndSolve file = do
+           s <- readSudoku file
+           let result = solve s
+           maybe (putStrLn "No solution") printSudoku result
 
+--------------------------------------------------------------------------
+-- Part F3
+coordinates = [(x,y) | x <- [0..8], y <- [0..8]]
 isSolutionOf :: Sudoku -> Sudoku -> Bool
-isSolutionOf sud1 sud2 = isSolved sud1 && isOkay sud1 && sameStartingValues
-  where  sameStartingValues = and [getPos(x,y) sud1 == getPos (x,y) sud2 | x<-[0..8], y<-[0..8],isJust (getPos (x,y) sud2)]
+isSolutionOf solved _ | not(isOkay solved) || not(isSolved solved) = False
+isSolutionOf solved unSolved = and [getPos p solved == getPos p unSolved | p <- nonBlanks]
+            where nonBlanks = [n | n <- coordinates, n `notElem` blanks unSolved]
 
+
+--------------------------------------------------------------------------
+-- Part F4
 prop_SolveSound :: Sudoku -> Property
+prop_SolveSound sud = isOkay sud ==> isSolutionOf (fromJust (solve sud)) sud
+
+fewerChecks prop = verboseCheckWith stdArgs{ maxSuccess = 30 } prop

@@ -75,6 +75,12 @@ makeBombField' :: [Pos] -> MineField -> MineField
 --makeBombField' (x:pos) field  = makeBombField' pos (updateTile x Bomb field)
 makeBombField' pos field = foldl (\ field x -> updateTile x Bomb field) field pos
 -- ^ according to hlint
+
+-- Single function for generating the field
+makeField :: Int -> Int -> Int -> StdGen -> MineField
+makeField x y bombs gen = calculateField bombField
+    where emptyField = makeEmptyField x y
+          bombField  = makeBombField bombs emptyField gen
 -------------------------------------------------------------------------------
 makeShuffledCoordinates :: [Pos] -> StdGen -> Int -> [Pos]
 makeShuffledCoordinates coords g n = take n shuffled
@@ -134,3 +140,45 @@ makeLine = map makeChar
 makeChar :: Tile -> Char
 makeChar Bomb  = 'B'
 makeChar (Numeric n) = intToDigit n
+--------------------------------------------------------------------------------
+isGameOver :: MineField -> Bool
+isGameOver field = or (map (Bomb `elem`) fieldRows)
+      where fieldRows = rows field
+
+-- Recursively reveals tiles using the Flood Fill algorithm
+revealTile :: MineField -> MineField -> Pos -> MineField
+revealTile guiLayer bombLayer (x,y)
+                | not (inBounds (x,y) bombLayer) = guiLayer `debug` "bug"
+                | otherwise = guiLayer `debug` "yaay"
+                {-
+                | otherwise      = if tile /= (Numeric 0)
+                                       then newGuiLayer `debug` (stringifyField newGuiLayer)
+                                       else gridNorth `debug` (stringifyField gridNorth) -}
+     where tile        = getPos (x,y) bombLayer
+           newGuiLayer = updateTile (x,y) tile guiLayer
+           gridEast    = revealTile newGuiLayer bombLayer (x+1,y)
+           gridWest    = revealTile gridEast bombLayer (x-1,y)
+           gridSouth   = revealTile gridWest bombLayer (x,y+1)
+           gridNorth   = revealTile gridSouth bombLayer (x,y-1)
+
+-- checks if a position is inside the MineField
+inBounds :: Pos -> MineField -> Bool
+inBounds (x,y) field = x >= 0 && y >= 0 && x <= xLen && y <= yLen
+     where fieldRows = rows field
+           yLen = length (fieldRows) -1
+           xLen = length (head fieldRows) -1
+{-
+ g <- newStdGen
+let empty = makeEmptyField 10 10
+let bombField = makeField 10 10 10 g
+ printMineField bombField
+let newField = revealTile empty bombField (0,2)
+ printMineField newField
+ -}
+
+--TODO REMOVE!!!! ONlY FOR DEBUG!
+stringifyField :: MineField -> String
+stringifyField field = concatMap makeLineWithBreak (rows field)
+
+makeLineWithBreak :: [Tile] -> String
+makeLineWithBreak list = makeLine list ++ "\n"

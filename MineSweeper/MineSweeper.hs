@@ -19,7 +19,7 @@ data Tile = Bomb | Numeric Int
 data MineField = MineField {rows :: [[Tile]]}
               deriving (Show, Eq)
 
---Bool saying whether the Tile is revealed or not
+-- The Bool states whether the Tile is revealed or not
 type GuiTile = (Bool, Tile)
 
 data GuiMineField = GuiMineField {rows' :: [[GuiTile]]}
@@ -100,6 +100,7 @@ makeField x y bombs gen = calculateField bombField
     where emptyField = makeEmptyField x y
           bombField  = makeBombField bombs emptyField gen
 -------------------------------------------------------------------------------
+-- Functions for making the field with bombs
 makeShuffledCoordinates :: [Pos] -> StdGen -> Int -> [Pos]
 makeShuffledCoordinates coords g n = take n shuffled
                   where len      = length coords
@@ -162,17 +163,18 @@ makeChar (Numeric n) = intToDigit n
 isGameOver :: MineField -> Bool
 isGameOver field = or (map (Bomb `elem`) fieldRows)
       where fieldRows = rows field
-
+--------------------------------------------------------------------------------
+-- Functions for revealing tiles
 
 -- Recursively reveals tiles using the Flood Fill algorithm
 revealTile :: GuiMineField -> Pos -> GuiMineField
 revealTile guiLayer (x,y)
-                | not (inBounds (x,y) guiLayer) || shown = guiLayer `debug` "bug"
+                | not (inBounds (x,y) guiLayer) || shown = guiLayer
                 | otherwise = if tile /= (Numeric 0)
-                                  then newGuiLayer `debug` "then"
-                                  else gridNorth `debug` stringifyField gridNorth
+                                  then newGuiLayer
+                                  else gridNorth
      where (shown,tile) = getGuiTile guiLayer (x,y)
-           newGuiLayer  = updateGuiTile (x,y) (True,tile) guiLayer
+           newGuiLayer  = showGuiTile guiLayer (x,y)
            gridEast     = revealTile newGuiLayer(x+1,y)
            gridWest     = revealTile gridEast (x-1,y)
            gridSouth    = revealTile gridWest (x,y+1)
@@ -184,15 +186,15 @@ showGuiTile field pos | shown     = field
                       | otherwise = updateGuiTile pos (True, val) field
    where (shown,val) = getGuiTile field pos
 
+   updateGuiTile :: Pos -> GuiTile -> GuiMineField -> GuiMineField
+   updateGuiTile (x,y) val field = GuiMineField(x' ++ [xRow !!= (x,val)] ++ x'')
+       where xs  = rows' field
+             x'   = take y xs
+             xRow = concat (take 1 (drop y xs))
+             x''  = drop (y+1) xs
+
 getGuiTile :: GuiMineField -> Pos -> GuiTile
 getGuiTile field (posX,posY) = rows' field !! posY !! posX
-
-updateGuiTile :: Pos -> GuiTile -> GuiMineField -> GuiMineField
-updateGuiTile (x,y) val field = GuiMineField(x' ++ [xRow !!= (x,val)] ++ x'')
-    where xs  = rows' field
-          x'   = take y xs
-          xRow = concat (take 1 (drop y xs))
-          x''  = drop (y+1) xs
 
 -- checks if a position is inside the MineField
 inBounds :: Pos -> GuiMineField -> Bool
@@ -201,7 +203,20 @@ inBounds (x,y) field = x >= 0 && y >= 0 && x <= xLen && y <= yLen
            yLen = length (fieldRows) -1
            xLen = length (head fieldRows) -1
 
+---------------------------------------------------------------------------------
+--Printing stuff for GuiMineField
+printGuiField :: GuiMineField -> IO ()
+printGuiField field = mapM_ (putStrLn . makeLine') (rows' field)
 
+makeLine' :: [GuiTile] -> String
+makeLine' = map makeChar'
+
+makeChar' :: GuiTile -> Char
+makeChar' (False, _)  = '-'
+makeChar' (_, Bomb)  = '*'
+makeChar' (_, Numeric n) = intToDigit n
+-----------------------------------------
+-- DEBUG STUFF
 testFunction = do
               g <- newStdGen
               let bombField = makeField 10 10 10 g
@@ -218,21 +233,9 @@ testFunction = do
               printGuiField newField
               return 0
 
-printGuiField :: GuiMineField -> IO ()
-printGuiField field = mapM_ (putStrLn . makeLine') (rows' field)
-
 --TODO REMOVE!!!! ONlY FOR DEBUG!
 stringifyField :: GuiMineField -> String
 stringifyField field = concatMap makeLineWithBreak (rows' field)
 
 makeLineWithBreak :: [GuiTile] -> String
 makeLineWithBreak list = makeLine' list ++ "\n"
-
-makeLine' :: [GuiTile] -> String
-makeLine' = map makeChar'
-
-makeChar' :: GuiTile -> Char
-makeChar' (False, _)  = '-'
-makeChar' (_, Bomb)  = '*'
-makeChar' (_, Numeric n) = intToDigit n
------------------------------------------

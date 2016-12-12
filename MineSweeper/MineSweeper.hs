@@ -173,7 +173,9 @@ isGameOver field = or (map ((Visible,Bomb) `elem`) fieldRows)
 --TODO write this one
 --This function should check if all non-bomb tiles are revealed
 isGameWon :: GuiMineField -> Bool
-isGameWon = undefined
+isGameWon field = and [(snd x == Bomb) | x <- fieldFilt]
+     where fieldCon  = concat (rows' field)
+           fieldFilt = [ x | x <- fieldCon, (fst x) == Nonvisible]
 --------------------------------------------------------------------------------
 -- Functions for revealing and flaging tiles
 
@@ -254,7 +256,8 @@ testFunction = do
               let newField = revealTile guiField (0, 0)
               putStrLn "---------------------------"
               printGuiField newField
-              return 0
+              let won = isGameWon newField
+              return won
 
 --TODO REMOVE!!!! ONlY FOR DEBUG!
 stringifyField :: GuiMineField -> String

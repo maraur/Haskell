@@ -119,7 +119,7 @@ updateTile (x,y) value field = MineField (rows field !!= (y,newRow))
 prop_updateTile :: MineField -> ValidPos -> Tile -> Bool
 prop_updateTile field (ValidPos (x,_)) _ | x >= length (rows field) = True
 prop_updateTile field (ValidPos (_,y)) _ | y >= length (transpose (rows field)) = True
-prop_updateTile field (ValidPos pos) val = getPos pos newField == val
+prop_updateTile field (ValidPos pos) val = getElement pos newField == val
                 where newField = updateTile pos val field
 
 makeBombField :: Int -> MineField -> StdGen -> MineField
@@ -157,7 +157,7 @@ calculateField field = calculateField' coords field
 
 calculateField' :: [Pos] -> MineField -> MineField
 calculateField' [] field = field
-calculateField' (x:pos) field = if getPos x field == Bomb
+calculateField' (x:pos) field = if getElement x field == Bomb
                                   then
                                     calculateField' pos field
                                   else
@@ -165,15 +165,23 @@ calculateField' (x:pos) field = if getPos x field == Bomb
         where value = calculateTile field x
 
 --TODO
-prop_calculateField :: MineField -> Bool
-prop_calculateField = undefined
+--prop_calculateField :: MineField -> Bool
+prop_calculateField field =
+   [isCorrectValue field pos| pos <- makeCoordinates field, isNumeric (getElement pos field)]
+
+isNumeric :: Tile -> Bool
+isNumeric (Numeric tile) = True
+isNumeric _ = False
+
+isCorrectValue :: MineField -> Pos -> Bool
+isCorrectValue field pos = getElement pos field == calculateTile field pos
 
 calculateTile :: MineField -> Pos -> Tile
 calculateTile field pos = Numeric value
     where value = length (square field pos)
 
 square :: MineField -> Pos -> [Tile]
-square field pos = [getPos x field| x <- positions, getPos x field == Bomb]
+square field pos = [getElement x field| x <- positions, getElement x field == Bomb]
     where positions = square' field pos
 
 square' :: MineField -> Pos -> [Pos]
@@ -184,8 +192,8 @@ square' field  (x,y) =
 isClose :: Int -> Int -> Bool
 isClose x y = x `elem` [(y-1)..(y+1)]
 
-getPos :: Pos -> MineField -> Tile
-getPos (posX,posY) field = rows field!!posY!!posX
+getElement :: Pos -> MineField -> Tile
+getElement (posX,posY) field = rows field!!posY!!posX
 
 --------------------------------------------------------------------------------
 --Just to see the field properly for debugging

@@ -82,11 +82,14 @@ prop_correctSize xs (NonNegative pos,val) =
                              length xs == length (xs !!= (pos,val))
 
 updateTile :: Pos -> Tile -> MineField -> MineField
-updateTile (x,y) val field = MineField(x' ++ [xRow !!= (x,val)] ++ x'')
-      where xs  = rows field
-            x'   = take y xs
-            xRow = concat (take 1 (drop y xs))
-            x''  = drop (y+1) xs
+updateTile (x,y) value field = MineField (rows field !!= (y,newRow))
+        where oldRow = rows field!!y
+              newRow = oldRow !!= (x, value)
+--TODO
+--prop_updateTile :: MineField -> ValidPos -> ValidValue -> Bool
+--prop_updateTile field (ValidPos pos) (ValidValue val)
+--                                    = getPos pos newField == val
+--                where newField = update field pos val
 
 makeBombField :: Int -> MineField -> StdGen -> MineField
 makeBombField numOfBombs field g = makeBombField' bombs field

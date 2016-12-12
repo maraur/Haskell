@@ -85,11 +85,13 @@ updateTile :: Pos -> Tile -> MineField -> MineField
 updateTile (x,y) value field = MineField (rows field !!= (y,newRow))
         where oldRow = rows field!!y
               newRow = oldRow !!= (x, value)
---TODO
---prop_updateTile :: MineField -> ValidPos -> ValidValue -> Bool
---prop_updateTile field (ValidPos pos) (ValidValue val)
---                                    = getPos pos newField == val
---                where newField = update field pos val
+
+--TODO make a function to create Arbitrary MineField
+prop_updateTile :: MineField -> Pos -> Tile -> Bool
+prop_updateTile field (x,_) _ | x >= length (rows field) = True
+prop_updateTile field (_,y) _ | y >= length (transpose (rows field)) = True
+prop_updateTile field pos val = getPos pos newField == val
+                where newField = updateTile pos val field
 
 makeBombField :: Int -> MineField -> StdGen -> MineField
 makeBombField numOfBombs field g = makeBombField' bombs field

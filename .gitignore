@@ -48,3 +48,7 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
+*.hi
+*.html
+*.o
+*.jsmod

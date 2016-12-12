@@ -20,9 +20,9 @@ data MineField = MineField {rows :: [[Tile]]}
               deriving (Show, Eq)
 
 -- The Bool states whether the Tile is revealed or not
-type GuiTile = (Bool, Tile)
+--type GuiTile = (Bool, Tile)
 
--- type GuiTile = (Vis, Tile)
+type GuiTile = (Vis, Tile)
 
 data Vis = Flag | Visible | Nonvisible
                deriving (Show, Eq)
@@ -57,7 +57,7 @@ makeEmptyField x y = MineField {rows = replicate y (replicate x (Numeric 0))}
 
 --Shouldn't be used!
 makeNewGuiField :: Int -> Int -> GuiMineField
-makeNewGuiField x y = GuiMineField {rows' = replicate y (replicate x (False, Numeric 0))}
+makeNewGuiField x y = GuiMineField {rows' = replicate y (replicate x (Nonvisible, Numeric 0))}
 
 makeGuiField :: MineField -> GuiMineField
 makeGuiField field = GuiMineField(map makeGuiLine (rows field))
@@ -66,7 +66,7 @@ makeGuiLine :: [Tile] -> [GuiTile]
 makeGuiLine = map makeGuiTile
 
 makeGuiTile :: Tile -> GuiTile
-makeGuiTile tile = (False, tile)
+makeGuiTile tile = (Nonvisible, tile)
 -------------------------------------------------------------------------------
 
 (!!=) :: [a] -> (Int,a) -> [a]
@@ -139,7 +139,7 @@ calculateTile field pos = Numeric value
     where value = length (square field pos)
 
 square :: MineField -> Pos -> [Tile]
-square field pos = [getPos x field| x <- positions, getPos x field ==Bomb]
+square field pos = [getPos x field| x <- positions, getPos x field == Bomb]
     where positions = square' field pos
 
 square' :: MineField -> Pos -> [Pos]
@@ -167,7 +167,7 @@ makeChar (Numeric n) = intToDigit n
 --------------------------------------------------------------------------------
 -- Functions for checking if game is over or won
 isGameOver :: GuiMineField -> Bool
-isGameOver field = or (map ((True,Bomb) `elem`) fieldRows)
+isGameOver field = or (map ((Visible,Bomb) `elem`) fieldRows)
       where fieldRows = rows' field
 
 --TODO write this one
@@ -176,8 +176,6 @@ isGameWon :: GuiMineField -> Bool
 isGameWon = undefined
 --------------------------------------------------------------------------------
 -- Functions for revealing and flaging tiles
---revealTileIO :: GuiMineField -> IO Pos -> GuiMineField
---revealTileIO
 
 -- Recursively reveals tiles using the Flood Fill algorithm
 revealTile :: GuiMineField -> Pos -> GuiMineField
@@ -186,21 +184,30 @@ revealTile guiLayer (x,y)
                 | otherwise = if tile /= (Numeric 0)
                                   then newGuiLayer
                                   else gridNorth
-     where (shown,tile) = getGuiTile guiLayer (x,y)
-           newGuiLayer  = showGuiTile guiLayer (x,y)
-           gridEast     = revealTile newGuiLayer(x+1,y)
-           gridWest     = revealTile gridEast (x-1,y)
-           gridSouth    = revealTile gridWest (x,y+1)
-           gridNorth    = revealTile gridSouth (x,y-1)
-{-
+     where (vis,tile) = getGuiTile guiLayer (x,y)
+           shown = vis == Visible
+           newGuiLayer   = showGuiTile guiLayer (x,y)
+           gridEast      = revealTile newGuiLayer(x+1,y)
+           gridWest      = revealTile gridEast (x-1,y)
+           gridSouth     = revealTile gridWest (x,y+1)
+           gridNorthEast = revealTile gridSouth (x+1,y-1)
+           gridNorthWest = revealTile gridNorthEast (x-1,y-1)
+           gridSouthEast = revealTile gridNorthWest (x+1,y+1)
+           gridSouthWest = revealTile gridNorthEast (x-1,y+1)
+           gridNorth     = revealTile gridSouthWest (x,y-1)
+
 flagTile :: GuiMineField -> Pos -> GuiMineField
-flagTile guiLayer (x,y) | not (inBounds (x,y) guiLayer) || shown = guiLayer
-                        | otherwise = updateGuiTile pos (True, val) field
--}
+flagTile field pos | not (inBounds pos field) || shown = field
+                   | otherwise = updateGuiTile pos (Flag, val) field
+      where (vis,val) = getGuiTile field pos
+            shown     = vis == Visible
+
+
 showGuiTile :: GuiMineField -> Pos -> GuiMineField
 showGuiTile field pos | shown     = field
-                      | otherwise = updateGuiTile pos (True, val) field
-   where (shown,val) = getGuiTile field pos
+                      | otherwise = updateGuiTile pos (Visible, val) field
+       where (vis,val) = getGuiTile field pos
+             shown     = vis == Visible
 
 updateGuiTile :: Pos -> GuiTile -> GuiMineField -> GuiMineField
 updateGuiTile (x,y) val field = GuiMineField(x' ++ [xRow !!= (x,val)] ++ x'')
@@ -227,7 +234,8 @@ makeLine' :: [GuiTile] -> String
 makeLine' = map makeChar'
 
 makeChar' :: GuiTile -> Char
-makeChar' (False, _)  = '-'
+makeChar' (Nonvisible, _)  = '-'
+makeChar' (Flag, _) = 'F'
 makeChar' (_, Bomb)  = '*'
 makeChar' (_, Numeric n) = intToDigit n
 -----------------------------------------

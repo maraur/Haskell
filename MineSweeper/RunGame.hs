@@ -20,18 +20,17 @@ gameLoop field = do
   if isGameOver field then do
        putStrLn "Game over!"
        else do
+         printGuiField field
          putStrLn "Press f to flag a tile, any other input will lead to showing a tile"
          choice <- getLine
-         printGuiField field
          let updatePos = readCoordinate
          if null choice || not (map toLower choice == "f") then do
             let field' = revealTile field (unsafePerformIO updatePos)
             gameLoop field'
          else do
-          --  let field' = flagTile field (unsafePerformIO updatePos)
-          --  gameLoop field'
-          gameLoop field
-          
+            let field' = flagTile field (unsafePerformIO updatePos)
+            gameLoop field'        
+
 -- Read coordinate from user input
 readCoordinate :: IO Pos
 readCoordinate = do

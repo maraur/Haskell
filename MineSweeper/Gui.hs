@@ -11,7 +11,7 @@ main = runF minefield
 shellF title fud = boxF (h2F (textF title) >+ fud)
 
 minefield = shellF "Minesweeper" $
-    fieldF
+    showF =<= fieldF
   where
     field = makeNewGuiField 15 15
     viewField = dataToGui field

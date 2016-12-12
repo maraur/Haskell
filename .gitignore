@@ -48,3 +48,8 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
+*.o
+*.hi
+*.hi
+*.o
+*.hi

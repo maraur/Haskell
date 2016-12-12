@@ -67,6 +67,36 @@ makeGuiLine = map makeGuiTile
 
 makeGuiTile :: Tile -> GuiTile
 makeGuiTile tile = (Nonvisible, tile)
+
+cell :: Gen Tile
+cell = frequency [(9, numberCell),(1,bombCell)]
+
+bombCell :: Gen Tile
+bombCell = return Bomb
+
+numberCell :: Gen Tile
+numberCell = do n <- choose(0,8)
+                return (Numeric n)
+
+-- an instance for generating Arbitrary MineFields
+instance Arbitrary MineField where
+  arbitrary =
+    do rows <- sequence [ sequence [ cell | j <- [1..9] ] | i <- [1..9] ]
+       return (MineField rows)
+
+instance Arbitrary Tile where
+    arbitrary =
+      do  a <- cell
+          return a
+
+data ValidPos = ValidPos Pos
+      deriving ( Show, Eq )
+
+instance Arbitrary ValidPos where
+      arbitrary =
+            do  a <- choose(0,8)
+                b <- choose(0,8)
+                return (ValidPos (a,b))
 -------------------------------------------------------------------------------
 
 (!!=) :: [a] -> (Int,a) -> [a]
@@ -85,11 +115,12 @@ updateTile :: Pos -> Tile -> MineField -> MineField
 updateTile (x,y) value field = MineField (rows field !!= (y,newRow))
         where oldRow = rows field!!y
               newRow = oldRow !!= (x, value)
---TODO
---prop_updateTile :: MineField -> ValidPos -> ValidValue -> Bool
---prop_updateTile field (ValidPos pos) (ValidValue val)
---                                    = getPos pos newField == val
---                where newField = update field pos val
+
+prop_updateTile :: MineField -> ValidPos -> Tile -> Bool
+prop_updateTile field (ValidPos (x,_)) _ | x >= length (rows field) = True
+prop_updateTile field (ValidPos (_,y)) _ | y >= length (transpose (rows field)) = True
+prop_updateTile field (ValidPos pos) val = getPos pos newField == val
+                where newField = updateTile pos val field
 
 makeBombField :: Int -> MineField -> StdGen -> MineField
 makeBombField numOfBombs field g = makeBombField' bombs field

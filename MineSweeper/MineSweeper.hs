@@ -82,9 +82,7 @@ instance Arbitrary MineField where
        return (MineField rows)
 
 instance Arbitrary Tile where
-    arbitrary =
-      do  a <- cell
-          return a
+    arbitrary = cell
 
 data ValidPos = ValidPos Pos
       deriving ( Show, Eq )
@@ -222,15 +220,15 @@ prop_getBombsPos field = and [isBomb (getElement x field) | x <- bombsPos]
 --------------------------------------------------------------------------------
 -- Functions for checking if game is over or won
 isGameOver :: GuiMineField -> Bool
-isGameOver field = or (map ((Visible,Bomb) `elem`) fieldRows)
+isGameOver field = any ((Visible,Bomb) `elem`) fieldRows
       where fieldRows = rows' field
 
 --TODO write this one
 --This function should check if all non-bomb tiles are revealed
 isGameWon :: GuiMineField -> Bool
-isGameWon field = and [(snd x == Bomb) | x <- fieldFilt]
+isGameWon field = and [snd x == Bomb | x <- fieldFilt]
      where fieldCon  = concat (rows' field)
-           fieldFilt = [ x | x <- fieldCon, (fst x) == Nonvisible]
+           fieldFilt = [ x | x <- fieldCon, fst x == Nonvisible]
 --------------------------------------------------------------------------------
 -- Functions for revealing and flaging tiles
 
@@ -238,7 +236,7 @@ isGameWon field = and [(snd x == Bomb) | x <- fieldFilt]
 revealTile :: GuiMineField -> Pos -> GuiMineField
 revealTile guiLayer (x,y)
                 | not (inBounds (x,y) guiLayer) || shown = guiLayer
-                | otherwise = if tile /= (Numeric 0)
+                | otherwise = if tile /= Numeric 0
                                   then newGuiLayer
                                   else gridNorth
      where (vis,tile) = getGuiTile guiLayer (x,y)
@@ -250,7 +248,7 @@ revealTile guiLayer (x,y)
            gridNorthEast = revealTile gridSouth (x+1,y-1)
            gridNorthWest = revealTile gridNorthEast (x-1,y-1)
            gridSouthEast = revealTile gridNorthWest (x+1,y+1)
-           gridSouthWest = revealTile gridNorthEast (x-1,y+1)
+           gridSouthWest = revealTile gridSouthEast (x-1,y+1)
            gridNorth     = revealTile gridSouthWest (x,y-1)
 
 flagTile :: GuiMineField -> Pos -> GuiMineField
@@ -279,7 +277,7 @@ getGuiTile field (posX,posY) = rows' field !! posY !! posX
 inBounds :: Pos -> GuiMineField -> Bool
 inBounds (x,y) field = x >= 0 && y >= 0 && x <= xLen && y <= yLen
      where fieldRows = rows' field
-           yLen = length (fieldRows) -1
+           yLen = length fieldRows -1
            xLen = length (head fieldRows) -1
 ---------------------------------------------------------------------------------
 --Printing stuff for GuiMineField

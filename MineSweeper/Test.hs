@@ -70,51 +70,52 @@ main = do
 
     let buttons = [topRow, row1, row2, row3, row4, row5]
 
-    --column documentBody ((mkButtons field))
+    let buttons' = mkButtons field
+    --column documentBody buttons'
     column documentBody buttons
 
-    let buttons' = [(\x y -> x++y) "button" (show x) | x<-[1..25]]
+    --let buttons' = [(\x y -> x++y) "button" (show x) | x<-[1..25]]
 
     --map setEvent buttons'
 
     --Interaction
-    onEvent actionButton Click $ \_ -> do toggleAction actionButton
+    onEvent actionButton Click $ \_ -> toggleAction actionButton
 
     --let setEvent btn = do onEvent btn Click $ \_ -> do gameLoop btn field actionButton
 
-{-
-    onEvent button1 Click $ \_ -> do gameLoop button1 field actionButton
-    onEvent button2 Click $ \_ -> do gameLoop button2 field actionButton
-    onEvent button3 Click $ \_ -> do gameLoop button3 field actionButton
-    onEvent button4 Click $ \_ -> do gameLoop button4 field actionButton
-    onEvent button5 Click $ \_ -> do gameLoop button5 field actionButton
-    onEvent button6 Click $ \_ -> do gameLoop button6 field actionButton
-    onEvent button7 Click $ \_ -> do gameLoop button7 field actionButton
-    onEvent button8 Click $ \_ -> do gameLoop button8 field actionButton
-    onEvent button9 Click $ \_ -> do gameLoop button9 field actionButton
-    onEvent button10 Click $ \_ -> do gameLoop button10 field actionButton
-    onEvent button11 Click $ \_ -> do gameLoop button11 field actionButton
-    onEvent button12 Click $ \_ -> do gameLoop button12 field actionButton
-    onEvent button13 Click $ \_ -> do gameLoop button13 field actionButton
-    onEvent button14 Click $ \_ -> do gameLoop button14 field actionButton
-    onEvent button15 Click $ \_ -> do gameLoop button15 field actionButton
-    onEvent button16 Click $ \_ -> do gameLoop button16 field actionButton
-    onEvent button17 Click $ \_ -> do gameLoop button17 field actionButton
-    onEvent button18 Click $ \_ -> do gameLoop button18 field actionButton
-    onEvent button19 Click $ \_ -> do gameLoop button19 field actionButton
-    onEvent button20 Click $ \_ -> do gameLoop button20 field actionButton
-    onEvent button21 Click $ \_ -> do gameLoop button21 field actionButton
-    onEvent button22 Click $ \_ -> do gameLoop button22 field actionButton
-    onEvent button23 Click $ \_ -> do gameLoop button23 field actionButton
-    onEvent button24 Click $ \_ -> do gameLoop button24 field actionButton
-    onEvent button25 Click $ \_ -> do gameLoop button25 field actionButton
--}
+
+    onEvent button1 Click $ \_ -> gameLoop button1 field actionButton buttons'
+    onEvent button2 Click $ \_ -> gameLoop button2 field actionButton buttons'
+    onEvent button3 Click $ \_ -> gameLoop button3 field actionButton buttons'
+    onEvent button4 Click $ \_ -> gameLoop button4 field actionButton buttons'
+    onEvent button5 Click $ \_ -> gameLoop button5 field actionButton buttons'
+    onEvent button6 Click $ \_ -> gameLoop button6 field actionButton buttons'
+    onEvent button7 Click $ \_ -> gameLoop button7 field actionButton buttons'
+    onEvent button8 Click $ \_ -> gameLoop button8 field actionButton buttons'
+    onEvent button9 Click $ \_ -> gameLoop button9 field actionButton buttons'
+    onEvent button10 Click $ \_ -> gameLoop button10 field actionButton buttons'
+    onEvent button11 Click $ \_ -> gameLoop button11 field actionButton buttons'
+    onEvent button12 Click $ \_ -> gameLoop button12 field actionButton buttons'
+    onEvent button13 Click $ \_ -> gameLoop button13 field actionButton buttons'
+    onEvent button14 Click $ \_ -> gameLoop button14 field actionButton buttons'
+    onEvent button15 Click $ \_ -> gameLoop button15 field actionButton buttons'
+    onEvent button16 Click $ \_ -> gameLoop button16 field actionButton buttons'
+    onEvent button17 Click $ \_ -> gameLoop button17 field actionButton buttons'
+    onEvent button18 Click $ \_ -> gameLoop button18 field actionButton buttons'
+    onEvent button19 Click $ \_ -> gameLoop button19 field actionButton buttons'
+    onEvent button20 Click $ \_ -> gameLoop button20 field actionButton buttons'
+    onEvent button21 Click $ \_ -> gameLoop button21 field actionButton buttons'
+    onEvent button22 Click $ \_ -> gameLoop button22 field actionButton buttons'
+    onEvent button23 Click $ \_ -> gameLoop button23 field actionButton buttons'
+    onEvent button24 Click $ \_ -> gameLoop button24 field actionButton buttons'
+    onEvent button25 Click $ \_ -> gameLoop button25 field actionButton buttons'
+
 -------------------------------------------------------------------------------
 toggleAction btn = do
             action <- getProp btn "innerHTML"
-            if action == "Press" then do
+            if action == "Press" then
                 set btn [ prop "innerHTML" =: "Flag"]
-            else do
+            else
                 set btn [ prop "innerHTML" =: "Press"]
             return ()
 
@@ -122,41 +123,45 @@ toggleAction btn = do
 --TODO count down on flags/bombs?
 --TODO when you press a tile with 0 it should reveal more buttons
 --    (probably needs a bitter field for 0 to come up though :(  )
-gameLoop btn field actionBtn = do
-      strPos <- getProp btn "btnID"
+gameLoop btn field actionBtn buttons' = do
+      strPos <- getProp btn "pos"
       let pos = toPos strPos
       let tile = getElement pos field
       let el = tileToString tile
       action <- getProp actionBtn "innerHTML"
-      if isFlag action then do
-        set btn [ prop "innerHTML" =: "F"]
-      else do
+      if isFlag action then
+        set btn [prop "innerHTML" =: "F"]
+      else
         if isBomb tile then do
-          setLabel btn el
+          updateButton btn el "hidden"
           alert "Game Over!"
         else do
-          setLabel btn el
-          return ()
+          updateButton btn el "visible"
+          if isGameWon' field buttons' then
+            alert "Congratulations, you won!"
+          else
+            return ()
 
 --TODO Doesn't work
-{-
-isGameWon' field buttons = buttonsPressed == shouldBePressed
+isGameWon' :: MineField -> [Elem]-> Bool
+isGameWon' field buttons'= shouldBePressed == buttonsPressed
       where shouldBePressed = getNonBombsPos field
             coords          = makeCoordinates field
-            buttonsPressed  = [toPos (getProp x "btnID") | x <- buttons, getProp x "status" == "visible"]
--}
+            buttonsPressed  = [toPos(unsafePerformIO (getProp x "pos")) |
+                                  x <- buttons',
+                                  unsafePerformIO (getProp x "status") == "visible"]
 
-setLabel btn label =
-      set btn [ prop "innerHTML" =: label,
-                prop "style" =: "width:2em;height:2em",
-                prop "status" =: "visible"]
+updateButton btn label status =
+      set btn [ prop "innerHTML"  =: label,
+                prop "style"      =: "width:2em;height:2em",
+                prop "status"     =: status]
 
-mkButtons :: MineField -> [ Elem]
-mkButtons field = [unsafePerformIO (mkButtons' field pos) | pos <- coords ]
+mkButtons :: MineField -> [Elem]
+mkButtons field = [unsafePerformIO (mkButtons' pos) | pos <- coords ]
     where coords = makeCoordinates field
 
-mkButtons' field pos = do button <- mkButton (tileToString (getElement pos field)) pos
-                          return button
+mkButtons' =  mkButton " "
+
 
 isFlag :: String -> Bool
 isFlag xs = xs == "Flag"
@@ -174,7 +179,7 @@ mkButton :: String -> Pos -> IO Elem
 mkButton label pos = do
           button <- newElem "button"
           set button [  prop "innerHTML" =: label,
-                        prop "btnID" =: show pos,
+                        prop "pos" =: show pos,
                         prop "style" =: "width:2em;height:2em",
                         prop "status" =: "hidden"]
           return button

@@ -43,8 +43,8 @@ mkInput width init = do
                             attr "value" =: init]
 
 -- `mkButton label` makes a clickable button with the given label
---mkButton :: String -> IO Elem
---mkButton label = newElem "button" `with` [prop "textContent" =: label]
+mkButton :: String -> IO Elem
+mkButton label = newElem "button" `with` [prop "textContent" =: label]
 
 -- `mkHTML html` makes an element with the specified HTML content
 mkHTML :: String -> IO Elem

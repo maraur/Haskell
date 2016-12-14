@@ -16,23 +16,23 @@ runGame = do
 
 -- | Play until the game is over or won
 gameLoop :: GuiMineField -> IO ()
-gameLoop field = do
+gameLoop field =
   if isGameOver field then do
        putStrLn "Game over!"
        else do
-         if isGameWon field then do
+         if isGameWon field then
             putStrLn "You win!"
             else do
               printGuiField field
               putStrLn "Press f to flag a tile, any other input will lead to showing a tile"
               choice <- getLine
               let updatePos = readCoordinate
-              if null choice || not (map toLower choice == "f") then do
+              if null choice || (map toLower choice /= "f") then do
                 let field' = revealTile field (unsafePerformIO updatePos)
                 gameLoop field'
                 else do
                   let field' = flagTile field (unsafePerformIO updatePos)
-                  gameLoop field'        
+                  gameLoop field'
 
 -- Read coordinate from user input
 readCoordinate :: IO Pos
@@ -42,6 +42,3 @@ readCoordinate = do
   putStrLn "Enter y coordinate"
   y <- getLine
   return ((read x :: Int),(read y :: Int))
-
-
---TODO Check if player wants to show or flag a tile

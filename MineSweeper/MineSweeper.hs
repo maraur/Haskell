@@ -19,12 +19,9 @@ data Tile = Bomb | Numeric Int
 data MineField = MineField {rows :: [[Tile]]}
               deriving (Show, Eq)
 
--- The Bool states whether the Tile is revealed or not
---type GuiTile = (Bool, Tile)
+type GuiTile = (Status, Tile)
 
-type GuiTile = (Vis, Tile)
-
-data Vis = Flag | Visible | Nonvisible
+data Status = Flag | Visible | Nonvisible
                deriving (Show, Eq)
 
 data GuiMineField = GuiMineField {rows' :: [[GuiTile]]}
@@ -206,6 +203,22 @@ makeLine = map makeChar
 makeChar :: Tile -> Char
 makeChar Bomb  = 'B'
 makeChar (Numeric n) = intToDigit n
+
+--------------------------------------------------------------------------------
+isBomb :: Tile -> Bool
+isBomb tile = tile == Bomb
+
+getNonBombsPos :: MineField -> [Pos]
+getNonBombsPos field = [x |  x <- coords, not (isBomb (getElement x field))]
+    where coords = makeCoordinates field
+
+getBombsPos :: MineField -> [Pos]
+getBombsPos field = [x |  x <- coords, isBomb (getElement x field)]
+    where coords = makeCoordinates field
+
+prop_getBombsPos :: MineField -> Bool
+prop_getBombsPos field = and [isBomb (getElement x field) | x <- bombsPos]
+    where bombsPos = getBombsPos field
 --------------------------------------------------------------------------------
 -- Functions for checking if game is over or won
 isGameOver :: GuiMineField -> Bool
@@ -242,28 +255,27 @@ revealTile guiLayer (x,y)
 
 flagTile :: GuiMineField -> Pos -> GuiMineField
 flagTile field pos | not (inBounds pos field) || shown = field
-                   | otherwise = updateGuiTile pos (Flag, val) field
+                   | otherwise = updateGuiTile field pos (Flag, val)
       where (vis,val) = getGuiTile field pos
             shown     = vis == Visible
 
 
 showGuiTile :: GuiMineField -> Pos -> GuiMineField
 showGuiTile field pos | shown     = field
-                      | otherwise = updateGuiTile pos (Visible, val) field
+                      | otherwise = updateGuiTile field pos (Visible, val)
        where (vis,val) = getGuiTile field pos
              shown     = vis == Visible
 
-updateGuiTile :: Pos -> GuiTile -> GuiMineField -> GuiMineField
-updateGuiTile (x,y) val field = GuiMineField(x' ++ [xRow !!= (x,val)] ++ x'')
-       where xs  = rows' field
-             x'   = take y xs
-             xRow = concat (take 1 (drop y xs))
-             x''  = drop (y+1) xs
+updateGuiTile :: GuiMineField -> Pos -> GuiTile -> GuiMineField
+updateGuiTile field (x,y) val  = GuiMineField (rows' field !!= (y,newRow))
+        where oldRow = rows' field!!y
+              newRow = oldRow !!= (x, val)
 
 getGuiTile :: GuiMineField -> Pos -> GuiTile
 getGuiTile field (posX,posY) = rows' field !! posY !! posX
 
 -- checks if a position is inside the MineField
+--TODO do we still need this?
 inBounds :: Pos -> GuiMineField -> Bool
 inBounds (x,y) field = x >= 0 && y >= 0 && x <= xLen && y <= yLen
      where fieldRows = rows' field

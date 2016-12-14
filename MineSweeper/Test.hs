@@ -6,17 +6,26 @@ import System.Random
 import WebFudgets
 import Data.Maybe
 import Data.Char (ord, chr, isDigit, digitToInt, intToDigit)
+import Foreign.Marshal
+import System.IO.Unsafe
 
 import Pages
 
+--TODO The buttons jump when pressed
+
+
+
 main = do
+    --Create a randomized minefield
     g <- newStdGen
     let field = calculateField (makeBombField 7 (makeEmptyField 5 5) g)
+    --let field = makeGuiField field
     --let coords = makeCoordinates field
     --let buttons = mkButtons field
+
+    -- Elements
     actionButton <- newElem "button"
     set actionButton [ prop "innerHTML" =: "Press"]
-
 
     button1 <- mkButton  " " (0,0)
     button2 <- mkButton  " " (1,0)
@@ -44,12 +53,13 @@ main = do
     button24 <- mkButton " " (3,4)
     button25 <- mkButton " " (4,4)
 
-    topRow   <- newElem "div"
-    row1  <- newElem "div"
-    row2  <- newElem "div"
-    row3  <- newElem "div"
-    row4  <- newElem "div"
-    row5  <- newElem "div"
+    --Layout
+    topRow    <- newElem "div"
+    row1      <- newElem "div"
+    row2      <- newElem "div"
+    row3      <- newElem "div"
+    row4      <- newElem "div"
+    row5      <- newElem "div"
 
     row topRow [actionButton]
     row row1  [button1, button2, button3, button4, button5]
@@ -60,36 +70,46 @@ main = do
 
     let buttons = [topRow, row1, row2, row3, row4, row5]
 
+    --column documentBody ((mkButtons field))
     column documentBody buttons
 
+    let buttons' = [(\x y -> x++y) "button" (show x) | x<-[1..25]]
+
+    --map setEvent buttons'
+
+    --Interaction
     onEvent actionButton Click $ \_ -> do toggleAction actionButton
 
-    onEvent button1 Click $ \_ -> do update button1 field actionButton
-    onEvent button2 Click $ \_ -> do update button2 field actionButton
-    onEvent button3 Click $ \_ -> do update button3 field actionButton
-    onEvent button4 Click $ \_ -> do update button4 field actionButton
-    onEvent button5 Click $ \_ -> do update button5 field actionButton
-    onEvent button6 Click $ \_ -> do update button6 field actionButton
-    onEvent button7 Click $ \_ -> do update button7 field actionButton
-    onEvent button8 Click $ \_ -> do update button8 field actionButton
-    onEvent button9 Click $ \_ -> do update button9 field actionButton
-    onEvent button10 Click $ \_ -> do update button10 field actionButton
-    onEvent button11 Click $ \_ -> do update button11 field actionButton
-    onEvent button12 Click $ \_ -> do update button12 field actionButton
-    onEvent button13 Click $ \_ -> do update button13 field actionButton
-    onEvent button14 Click $ \_ -> do update button14 field actionButton
-    onEvent button15 Click $ \_ -> do update button15 field actionButton
-    onEvent button16 Click $ \_ -> do update button16 field actionButton
-    onEvent button17 Click $ \_ -> do update button17 field actionButton
-    onEvent button18 Click $ \_ -> do update button18 field actionButton
-    onEvent button19 Click $ \_ -> do update button19 field actionButton
-    onEvent button20 Click $ \_ -> do update button20 field actionButton
-    onEvent button21 Click $ \_ -> do update button21 field actionButton
-    onEvent button22 Click $ \_ -> do update button22 field actionButton
-    onEvent button23 Click $ \_ -> do update button23 field actionButton
-    onEvent button24 Click $ \_ -> do update button24 field actionButton
-    onEvent button25 Click $ \_ -> do update button25 field actionButton
+    --let setEvent btn = do onEvent btn Click $ \_ -> do gameLoop btn field actionButton
 
+{-
+    onEvent button1 Click $ \_ -> do gameLoop button1 field actionButton
+    onEvent button2 Click $ \_ -> do gameLoop button2 field actionButton
+    onEvent button3 Click $ \_ -> do gameLoop button3 field actionButton
+    onEvent button4 Click $ \_ -> do gameLoop button4 field actionButton
+    onEvent button5 Click $ \_ -> do gameLoop button5 field actionButton
+    onEvent button6 Click $ \_ -> do gameLoop button6 field actionButton
+    onEvent button7 Click $ \_ -> do gameLoop button7 field actionButton
+    onEvent button8 Click $ \_ -> do gameLoop button8 field actionButton
+    onEvent button9 Click $ \_ -> do gameLoop button9 field actionButton
+    onEvent button10 Click $ \_ -> do gameLoop button10 field actionButton
+    onEvent button11 Click $ \_ -> do gameLoop button11 field actionButton
+    onEvent button12 Click $ \_ -> do gameLoop button12 field actionButton
+    onEvent button13 Click $ \_ -> do gameLoop button13 field actionButton
+    onEvent button14 Click $ \_ -> do gameLoop button14 field actionButton
+    onEvent button15 Click $ \_ -> do gameLoop button15 field actionButton
+    onEvent button16 Click $ \_ -> do gameLoop button16 field actionButton
+    onEvent button17 Click $ \_ -> do gameLoop button17 field actionButton
+    onEvent button18 Click $ \_ -> do gameLoop button18 field actionButton
+    onEvent button19 Click $ \_ -> do gameLoop button19 field actionButton
+    onEvent button20 Click $ \_ -> do gameLoop button20 field actionButton
+    onEvent button21 Click $ \_ -> do gameLoop button21 field actionButton
+    onEvent button22 Click $ \_ -> do gameLoop button22 field actionButton
+    onEvent button23 Click $ \_ -> do gameLoop button23 field actionButton
+    onEvent button24 Click $ \_ -> do gameLoop button24 field actionButton
+    onEvent button25 Click $ \_ -> do gameLoop button25 field actionButton
+-}
+-------------------------------------------------------------------------------
 toggleAction btn = do
             action <- getProp btn "innerHTML"
             if action == "Press" then do
@@ -99,29 +119,51 @@ toggleAction btn = do
             return ()
 
 
---TODO make a isFlag function
-update btn field actionBtn = do
+--TODO count down on flags/bombs?
+--TODO when you press a tile with 0 it should reveal more buttons
+--    (probably needs a bitter field for 0 to come up though :(  )
+gameLoop btn field actionBtn = do
       strPos <- getProp btn "btnID"
-      let tile = getElement (toPos strPos) field
-      let el = elToString tile
+      let pos = toPos strPos
+      let tile = getElement pos field
+      let el = tileToString tile
       action <- getProp actionBtn "innerHTML"
-      if action == "Flag" then do
+      if isFlag action then do
         set btn [ prop "innerHTML" =: "F"]
       else do
-        if tile == Bomb then do
-          set btn [ prop "innerHTML" =: el,  prop "style" =: "width:2em;height:2em"]
+        if isBomb tile then do
+          setLabel btn el
           alert "Game Over!"
         else do
-          set btn [ prop "innerHTML" =: el,  prop "style" =: "width:2em;height:2em"]
+          setLabel btn el
           return ()
 
---mkButtons :: MineField -> [IO Elem]
---mkButtons field = [mkButton (getElement pos field) pos | pos <- coords ]
---    where coords = makeCoordinates field
+--TODO Doesn't work
+{-
+isGameWon' field buttons = buttonsPressed == shouldBePressed
+      where shouldBePressed = getNonBombsPos field
+            coords          = makeCoordinates field
+            buttonsPressed  = [toPos (getProp x "btnID") | x <- buttons, getProp x "status" == "visible"]
+-}
 
-elToString :: Tile -> String
-elToString (Numeric el) = toString el
-elToString _            = "B"
+setLabel btn label =
+      set btn [ prop "innerHTML" =: label,
+                prop "style" =: "width:2em;height:2em",
+                prop "status" =: "visible"]
+
+mkButtons :: MineField -> [ Elem]
+mkButtons field = [unsafePerformIO (mkButtons' field pos) | pos <- coords ]
+    where coords = makeCoordinates field
+
+mkButtons' field pos = do button <- mkButton (tileToString (getElement pos field)) pos
+                          return button
+
+isFlag :: String -> Bool
+isFlag xs = xs == "Flag"
+
+tileToString :: Tile -> String
+tileToString (Numeric el) = toString el
+tileToString _            = "B"
 
 toPos :: String -> Pos
 toPos xs = (x,y)
@@ -131,5 +173,8 @@ toPos xs = (x,y)
 mkButton :: String -> Pos -> IO Elem
 mkButton label pos = do
           button <- newElem "button"
-          set button [ prop "innerHTML" =: label, prop "btnID" =: show pos, prop "style" =: "width:2em;height:2em"]
+          set button [  prop "innerHTML" =: label,
+                        prop "btnID" =: show pos,
+                        prop "style" =: "width:2em;height:2em",
+                        prop "status" =: "hidden"]
           return button
